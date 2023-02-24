@@ -25,9 +25,9 @@ def AE_per_lam(c0,c1,tau_b,walpha):
     function containing the integral over z for exactly omnigenous systems.
     This is the available energy per lambda. 
     """
-    condition1 = (c0>=0) and (c1<=0)
-    condition2 = (c0>=0) and (c1>0)
-    condition3 = (c0<0)  and (c1<0)
+    condition1 = np.logical_and((c0>=0),(c1<=0))
+    condition2 = np.logical_and((c0>=0),(c1>0))
+    condition3 = np.logical_and((c0<0),(c1<0))
     ans = np.zeros(len(c1))
     ans[condition1]  = (2 * c0[condition1] - 5 * c1[condition1])
     ans[condition2]  = (2 * c0[condition2] - 5 * c1[condition2]) * erf(np.sqrt(c0[condition2]/c1[condition2])) + 2 / (3 *np.sqrt(np.pi)) * ( 4 * c0[condition2] + 15 * c1[condition2] ) * np.sqrt(c0[condition2]/c1[condition2]) * np.exp( - c0[condition2]/c1[condition2] )
@@ -173,8 +173,7 @@ class AE_gist:
     Class which calculates data related to AE. Contains several plotting 
     routines, useful for assessing drifts and spatial structure of AE.
     """
-    def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic',
-                 norm='fluxtube_vol'):
+    def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic'):
         
         # import relevant data
         self.L1      = gist_data.L1 
@@ -199,6 +198,7 @@ class AE_gist:
         self.taub  = tau_b_list
         self.lam    = lam_list
         self.k2     = k2
+        self.ft_vol = np.trapz(self.sqrtg,self.theta)/np.trapz(self.sqrtg*self.modb,self.theta)
         
 
     def calc_AE(self,omn,omt,omnigenous,Delta_x,Delta_y):
@@ -403,3 +403,7 @@ class AE_gist:
                 #This is recommendation for publication plots
                 dpi=1000)
         plt.show()
+
+
+
+

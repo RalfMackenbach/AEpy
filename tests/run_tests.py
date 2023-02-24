@@ -3,7 +3,7 @@ import numpy as np
 from AEpy import mag_reader
 
 
-lam_res = 100
+lam_res = 1000
 omn_res = 50
 
 # Quick tests on D3D, checking scaling laws, difference between omnigenous and non-omnigenous,
@@ -19,16 +19,29 @@ data.plot_geometry()
 # Calculate AE and plot, find difference between omnigenous and non omnigenous
 AE_dat = ae.AE_gist(data,quad=False,lam_res=lam_res)
 AE_dat.plot_precession()
-AE_dat.calc_AE(omn=1.0,omt=0.0,omnigenous=True,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)
+AE_dat.calc_AE(omn=1.0,omt=1.0,omnigenous=True,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)
 AE_dat.plot_AE_per_lam()
 omnigenous      = AE_dat.ae_tot
-AE_dat.calc_AE(omn=1.0,omt=0.0,omnigenous=False ,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)
+AE_dat.calc_AE(omn=1.0,omt=1.0,omnigenous=False ,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)
 not_omnigenous  = AE_dat.ae_tot
 # find difference
 print('DIII-D: 1 - omnigenous/nonomnigenous = ', 1 - omnigenous/not_omnigenous)
 
+
+# Calculate AE and find difference for slow and fast method
+AE_dat = ae.AE_gist(data,quad=False,lam_res=lam_res)
+AE_dat.plot_precession()
+AE_dat.calc_AE(omn=1.0,omt=1.0,omnigenous=False,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)
+slow      = AE_dat.ae_tot
+AE_dat.calc_AE_fast(omn=1.0,omt=1.0,omnigenous=False ,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)
+fast  = AE_dat.ae_tot
+# find difference between slow and fast method
+print('(slow-fast)/fast = ', (slow-fast)/fast)
+
+
+
 # now do scaling law:
-omn_range = np.logspace(-4,2,omn_res)
+omn_range = np.logspace(-3,3,omn_res)
 ae_vals   = np.zeros_like(omn_range)
 for omn_idx, omn_val in np.ndenumerate(omn_range):
     AE_dat.calc_AE(omn=omn_range[omn_idx],omt=0.0,omnigenous=True,Delta_x=AE_dat.q0,Delta_y=AE_dat.q0)

@@ -271,3 +271,5 @@ class mag_data:
         self.L1     = L1_f(theta_new)
         self.dBdz   = dBdz_f(theta_new)
         self.g22    = g22_f(theta_new)
+
+
