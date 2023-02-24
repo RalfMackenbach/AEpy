@@ -173,24 +173,37 @@ class AE_gist:
     Class which calculates data related to AE. Contains several plotting 
     routines, useful for assessing drifts and spatial structure of AE.
     """
-    def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic'):
+    def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic',
+                 get_drifts=True,normalize='ft-vol'):
         
         # import relevant data
-        self.L1      = gist_data.L1 
-        self.L2      = gist_data.L2
-        self.sqrtg   = gist_data.sqrtg
-        self.modb    = gist_data.modb
-        self.theta   = gist_data.theta
-        self.q0      = np.abs(gist_data.q0)
+        self.L1         = gist_data.L1 
+        self.L2         = gist_data.L2
+        self.sqrtg      = gist_data.sqrtg
+        self.modb       = gist_data.modb
+        self.theta      = gist_data.theta
+        self.q0         = np.abs(gist_data.q0)
+        self.interp_kind= interp_kind
+        self.lam_res    = lam_res
+        self.quad       = quad
         try:
             self.my_dpdx = gist_data.my_dpdx
         except:
             print('my_dpdx is unavailable - defaulting to zero.')
             self.my_dpdx = 0.0
+        self.ft_vol = np.trapz(self.sqrtg,self.theta)/np.trapz(self.sqrtg*self.modb,self.theta)
+        self.normalize = normalize
+
+
+        if get_drifts==True:
+            self.calculate_drifts()
+
+    def calculate_drifts(self):
 
         # calculate drifts
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_gist(self.theta,
-        self.modb,self.sqrtg,self.L1,self.L2,self.my_dpdx,lam_res,quad=quad,interp_kind=interp_kind)
+        self.modb,self.sqrtg,self.L1,self.L2,self.my_dpdx,self.lam_res,quad=self.quad,
+        interp_kind=self.interp_kind)
         # assign to self
         self.roots  = roots_list
         self.wpsi   = wpsi_list
@@ -198,7 +211,6 @@ class AE_gist:
         self.taub  = tau_b_list
         self.lam    = lam_list
         self.k2     = k2
-        self.ft_vol = np.trapz(self.sqrtg,self.theta)/np.trapz(self.sqrtg*self.modb,self.theta)
         
 
     def calc_AE(self,omn,omt,omnigenous,Delta_x,Delta_y):
@@ -232,7 +244,9 @@ class AE_gist:
         for lam_idx, lam_val in enumerate(lam_arr):
             ae_per_lam_summed[lam_idx] = np.sum(self.ae_per_lam[lam_idx])
         ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
-        self.ae_tot     = Delta_x * Delta_y * ae_tot
+        if self.normalize=='ft-vol':
+            ae_tot = ae_tot/self.ft_vol
+        self.ae_tot     = ae_tot
 
 
     def calc_AE_fast(self,omn,omt,omnigenous,Delta_x,Delta_y):
@@ -264,7 +278,9 @@ class AE_gist:
         for lam_idx, lam_val in enumerate(lam_arr):
             ae_per_lam_summed[lam_idx] = np.sum(ae_at_lam_list[lam_idx])
         ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
-        self.ae_tot     = Delta_x * Delta_y * ae_tot
+        if self.normalize=='ft-vol':
+            ae_tot = ae_tot/self.ft_vol
+        self.ae_tot     = ae_tot
 
 
     def plot_precession(self,save=False,filename='AE_precession.eps'):

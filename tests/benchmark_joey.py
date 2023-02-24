@@ -15,7 +15,7 @@ mpl.rc('font', **font)
 
 lam_res = 10000
 omn_res = 100
-plot=False
+plot=True
 
 
 # Quick tests on D3D, checking scaling laws, difference between omnigenous and non-omnigenous,
