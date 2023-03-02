@@ -174,7 +174,7 @@ class AE_gist:
     routines, useful for assessing drifts and spatial structure of AE.
     """
     def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic',
-                 get_drifts=True,normalize='ft-vol'):
+                 get_drifts=True,normalize='ft-vol',AE_lengthscale='q'):
         
         # import relevant data
         self.L1         = gist_data.L1 
@@ -191,8 +191,20 @@ class AE_gist:
         except:
             print('my_dpdx is unavailable - defaulting to zero.')
             self.my_dpdx = 0.0
+        try:
+            self.s0 = gist_data.s0
+        except:
+            print('s0 is unavailable - defaulting to 0.5.')
+            self.s0 = 0.5
         self.ft_vol = np.trapz(self.sqrtg,self.theta)/np.trapz(self.sqrtg*self.modb,self.theta)
         self.normalize = normalize
+
+        self.Delta_x = 1.0
+        self.Delta_y = 1.0/np.sqrt(self.s0)
+        if AE_lengthscale=='q':
+            self.Delta_x = self.q0 * self.Delta_x
+            self.Delta_y = self.q0 * self.Delta_y
+        
 
 
         if get_drifts==True:
@@ -208,13 +220,15 @@ class AE_gist:
         self.roots  = roots_list
         self.wpsi   = wpsi_list
         self.walpha = walpha_list
-        self.taub  = tau_b_list
+        self.taub   = tau_b_list
         self.lam    = lam_list
         self.k2     = k2
         
 
-    def calc_AE(self,omn,omt,omnigenous,Delta_x,Delta_y):
+    def calc_AE(self,omn,omt,omnigenous):
         # loop over all lambda
+        Delta_x = self.Delta_x
+        Delta_y = self.Delta_y
         L_tot  = np.trapz(self.sqrtg*self.modb,self.theta)
         ae_at_lam_list = []
         if omnigenous==False:
@@ -249,9 +263,11 @@ class AE_gist:
         self.ae_tot     = ae_tot
 
 
-    def calc_AE_fast(self,omn,omt,omnigenous,Delta_x,Delta_y):
+    def calc_AE_fast(self,omn,omt,omnigenous):
         # loop over all lambda
         L_tot  = np.trapz(self.sqrtg*self.modb,self.theta)
+        Delta_x = self.Delta_x
+        Delta_y = self.Delta_y
         ae_at_lam_list = []
         if omnigenous==False:
             for lam_idx, lam_val in enumerate(self.lam):
@@ -371,8 +387,7 @@ class AE_gist:
 
         mpl.rc('font', **font)
         c = 0.5
-        fig ,ax = plt.subplots()
-        fig.set_size_inches(5/6*6, 5/6*3.5)
+        fig ,ax = plt.subplots(1, 1, figsize=(6, 3),layout='constrained')
         ax.set_xlim(min(self.theta)/np.pi,max(self.theta)/np.pi)
 
         lam_arr   = np.asarray(self.lam).flatten()
@@ -402,15 +417,38 @@ class AE_gist:
                 else:
                     ax.plot([bws[2*idx_bw]/np.pi, bws[2*idx_bw+1]/np.pi], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
 
+        # now do plot as a function of bounce-angle
+        walpha_bounceplot = []
+        roots_bounceplot  = []
+        wpsi_bounceplot   = []
+        for lam_idx, lam_val in enumerate(self.lam):
+            root_at_lam = self.roots[lam_idx]
+            wpsi_at_lam = self.wpsi[lam_idx]
+            walpha_at_lam= self.walpha[lam_idx]
+            roots_bounceplot.extend(root_at_lam)
+            for idx in range(len(wpsi_at_lam)):
+                wpsi_bounceplot.extend([wpsi_at_lam[idx]])
+                wpsi_bounceplot.extend([wpsi_at_lam[idx]])
+                walpha_bounceplot.extend([walpha_at_lam[idx]])
+                walpha_bounceplot.extend([walpha_at_lam[idx]])
+
+        roots_ordered, wpsi_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, wpsi_bounceplot))))
+        roots_ordered, walpha_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, walpha_bounceplot))))
+
+
+        roots_ordered = [root/np.pi for root in roots_ordered]
+
         ax.plot(self.theta/np.pi,self.modb,color='black',linewidth=2)
         ax2 = ax.twinx()
-        ax2.plot(self.theta/np.pi, self.L2, 'red')
+        ax2.plot(roots_ordered, wpsi_bounceplot, 'cornflowerblue',linestyle='dashdot',label=r'$\omega_\psi$')
+        ax2.plot(roots_ordered, walpha_bounceplot, 'tab:green',linestyle='dashed',label=r'$\omega_\alpha$')
+        ax2.plot(self.theta/np.pi,self.theta*0.0,linestyle='dotted',color='black')
         ax.set_ylabel(r'$B$')
-        ax2.set_ylabel(r'$\mathcal{L}_2$',color='red')
-        ax2.plot(self.theta/np.pi,self.theta*0.0,linestyle='dashed',color='red')
-        ax2.tick_params(axis='y', colors='black',labelcolor='red',direction='in')
+        ax2.set_ylabel(r'$\omega_\alpha, \quad \omega_\psi$')
+        ax2.tick_params(axis='y', colors='black',direction='in')
         ax.set_xlabel(r'$\theta/\pi$')
         ax.tick_params(axis='both',direction='in')
+        ax2.legend(loc='lower right')
         plt.subplots_adjust(left=0.1, right=0.88, top=0.99, bottom=0.08)
         cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_ae_per_lam, clip=False), cmap=cm.plasma), ticks=[0, max_ae_per_lam], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda$') #'%.3f'
         cbar.ax.set_xticklabels([0, round(max_ae_per_lam, 1)])
