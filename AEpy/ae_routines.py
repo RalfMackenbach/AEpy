@@ -449,9 +449,10 @@ class AE_gist:
         ax.set_xlabel(r'$\theta/\pi$')
         ax.tick_params(axis='both',direction='in')
         ax2.legend(loc='lower right')
-        plt.subplots_adjust(left=0.1, right=0.88, top=0.99, bottom=0.08)
         cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_ae_per_lam, clip=False), cmap=cm.plasma), ticks=[0, max_ae_per_lam], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda$') #'%.3f'
         cbar.ax.set_xticklabels([0, round(max_ae_per_lam, 1)])
+        ax.set_ylim([0.9,1.2])
+        ax2.set_ylim([-0.15,0.3])
         if save==True:
             plt.savefig(filename, format='png',
                 #This is recommendation for publication plots
