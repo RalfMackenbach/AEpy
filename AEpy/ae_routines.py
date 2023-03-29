@@ -253,10 +253,7 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 
 def nae_geo(stel, r, phi, alpha):
-    stel.spsi = -1
-    stel.zs = -stel.zs
-    stel.calculate()
-    
+  
     # B x grad(B) . grad(psi)
     # alpha = 0
 
@@ -338,9 +335,7 @@ def nae_geo(stel, r, phi, alpha):
     BdotdB = r*BdotdB_1 + r*r*BdotdB_2
 
     # mod B
-    B20 = stel.B20
-    B   = stel.B0 * (1+r*stel.etabar*np.cos(alpha+stel.iotaN*phi)+r*r*(B20+stel.B2c*np.cos(2*(alpha+stel.iotaN*phi))+ \
-            stel.B2s*np.sin(2*(alpha+stel.iotaN*phi))))
+    B   = B0 + r * B1 + r*r * B2
     
     # Jacobian
     jac_cheeky = (stel.G0+r*r*stel.G2+stel.iota*stel.I2)/B/B
@@ -660,8 +655,22 @@ class AE_pyQSC:
         phi_end     = (N_turns*np.pi - alpha)/stel.iotaN
         phi         = np.linspace(phi_start, phi_end, nphi)
 
-        _, BxdBdotdalpha, BxdBdotdpsi, _, B, _ = nae_geo(stel, r, phi, alpha)
+        stel.spsi = -1
+        stel.zs = -stel.zs
+        stel.calculate()
 
+        varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky = nae_geo(stel, r, phi, alpha)
+
+        # Transform to Boozer coordinates
+        from scipy.interpolate import interp1d
+
+        BxdBdotdalpha_spline = interp1d(varphi, BxdBdotdalpha)
+        BxdBdotdpsi_spline = interp1d(varphi, BxdBdotdpsi)
+        B_spline = interp1d(varphi, B)
+
+        BxdBdotdalpha = BxdBdotdalpha_spline(phi)
+        BxdBdotdpsi = BxdBdotdpsi_spline(phi)
+        B = B_spline(phi)
 
         # assign to self, same units as GIST uses
         dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
@@ -670,7 +679,7 @@ class AE_pyQSC:
         self.L1     = BxdBdotdpsi/B/B/dpsidr
         self.L2     = BxdBdotdalpha/B/B/dalphady
         self.modB   = B
-        self.dldphi = 1.0/B # proportional to 1/B, see BAD manuscript.
+        self.dldphi = jac_cheeky * B # B/(B.grad(varphi))
 
         my_dpdx = 0.0
 
@@ -779,6 +788,6 @@ class AE_pyQSC:
         plt.show()
 
 
-NAE_AE = AE_pyQSC()
-NAE_AE.plot_geom()
-NAE_AE.plot_precession()
+# NAE_AE = AE_pyQSC()
+# NAE_AE.plot_geom()
+# NAE_AE.plot_precession()

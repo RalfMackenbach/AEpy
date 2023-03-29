@@ -1,0 +1,10 @@
+README.md
+setup.py
+AEpy/__init__.py
+AEpy/ae_routines.py
+AEpy/mag_reader.py
+AEpy.egg-info/PKG-INFO
+AEpy.egg-info/SOURCES.txt
+AEpy.egg-info/dependency_links.txt
+AEpy.egg-info/requires.txt
+AEpy.egg-info/top_level.txt
