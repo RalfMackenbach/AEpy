@@ -3,6 +3,7 @@ from scipy.integrate import quad, quad_vec
 from scipy.interpolate import interp1d
 from BAD import bounce_int
 import numpy as np
+from qsc import Qsc
 
 
 def w_diamag(dlnndx,dlnTdx,z):
@@ -168,17 +169,197 @@ def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 
 
+def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kind='cubic'):
+    r"""
+    Calculate the drift given pyQSC input arrays. 
+
+    """
+    # make lam arr
+    lam_arr = np.linspace(1/modb.max(),1/modb.min(),lam_res+1,endpoint=False)
+    lam_arr = np.delete(lam_arr,  0)
+
+    # routine if quad is true:
+    # make interpolated functions
+    if quad==True:
+        L1_f    = interp1d(theta,L1,kind=interp_kind)
+        L2_f    = interp1d(theta,L2,kind=interp_kind)
+        dldz_f  = interp1d(theta,dldz,kind=interp_kind)
+        modb_f  = interp1d(theta,modb,kind=interp_kind)
+        # we're going to make a much finer resolved 
+        # theta_arr to evaluate the function on
+        theta   = np.linspace(theta.min(),theta.max(),1000)
+
+        # loop over lambda 
+        # and save results in list of lists
+        wpsi_list   = []
+        walpha_list = []
+        tau_b_list  = []
+        roots_list  = []
+        lam_list    = []
+        # start the loop
+        for lam_idx, lam_val in enumerate(lam_arr):
+            # construct interpolated drift for lambda vals
+            f  = lambda x: 1.0 - lam_val * modb_f(x)
+            h  = lambda x: dldz_f(x)
+            hx = lambda x: ( lam_val + 2 * (1/modb_f(x) - lam_val) ) * L1_f(x) * dldz_f(x)
+            hy = lambda x: ( ( lam_val + 2 * (1/modb_f(x) - lam_val) ) * L2_f(x) - my_dpdx * (1 - lam_val * modb_f(x))/modb_f(x)**2 ) * dldz_f(x)
+            list, roots = all_drifts(f,h,hx,hy,theta,is_func=True,sinhtanh=False)
+            roots       = np.asarray(roots)
+            tau_b       = np.asarray(list[0])
+            delta_psi   = np.asarray(list[1])
+            delta_alpha = np.asarray(list[2])
+            walpha      = delta_alpha/tau_b
+            wpsi        = delta_psi/tau_b
+            wpsi_list.append(wpsi)
+            walpha_list.append(walpha)
+            tau_b_list.append(tau_b)
+            roots_list.append(roots)
+            lam_list.append([lam_val])
+            print(lam_idx)
+
+    # routine if quad is False:
+    if quad==False:
+        # loop over lambda 
+        # and save results in list of lists
+        wpsi_list   = []
+        walpha_list = []
+        tau_b_list  = []
+        roots_list  = []
+        lam_list    = []
+        # start the loop
+        for lam_idx, lam_val in enumerate(lam_arr):
+            # construct interpolated drift for lambda vals
+            f  = 1 - lam_val * modb
+            h  = dldz
+            hx =( lam_val + 2 * (1/modb - lam_val) ) * L1 * dldz
+            hy =( ( lam_val + 2 * (1/modb - lam_val) ) * L2 - my_dpdx * (1 - lam_val * modb)/modb**2 ) * dldz
+            list, roots = all_drifts(f,h,hx,hy,theta,is_func=False,sinhtanh=False)
+            roots       = np.asarray(roots)
+            tau_b       = np.asarray(list[0])
+            delta_psi   = np.asarray(list[1])
+            delta_alpha = np.asarray(list[2])
+            walpha      = delta_alpha/tau_b
+            wpsi        = delta_psi/tau_b
+            wpsi_list.append(wpsi)
+            walpha_list.append(walpha)
+            tau_b_list.append(tau_b)
+            roots_list.append(roots)
+            lam_list.append([lam_val])
+        k2         = (1 - lam_arr*np.amin(modb))*np.amax(modb)/(np.amax(modb)-np.amin(modb)) 
+    
+    return roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2
+
+
+
+
+def nae_geo(stel, r, phi, alpha):
+    stel.spsi = -1
+    stel.zs = -stel.zs
+    stel.calculate()
+    
+    # B x grad(B) . grad(psi)
+    # alpha = 0
+
+    # Extract basic properties from pyQSC
+    B0 = stel.B0
+    B1c = stel.etabar*stel.B0
+    B1s = 0
+
+    vals = {}
+    vals["nu"] = stel.varphi - stel.phi
+
+    var_names = ["curvature","X1c","X1s","Y1c","Y1s","B20","X20","X2c", \
+                "X2s", "Y20", "Y2c", "Y2s", "Z20", "Z2c", "Z2s"]
+    for name in var_names:
+        vals[name] = getattr(stel,name)
+
+    # Compute derivatives 
+    var_names = ["X1c","X1s","Y1c","Y1s","B20","X20","X2c", \
+                "X2s", "Y20", "Y2c", "Y2s", "Z20", "Z2c", "Z2s"]
+    dvar_names = ["dX1c_dvarphi","dX1s_dvarphi","dY1c_dvarphi","dY1s_dvarphi","dB20_dvarphi","dX20_dvarphi","dX2c_dvarphi", \
+                "dX2s_dvarphi", "dY20_dvarphi", "dY2c_dvarphi", "dY2s_dvarphi", "dZ20_dvarphi", "dZ2c_dvarphi", "dZ2s_dvarphi"]
+
+    for name, dname in zip(var_names,dvar_names):
+        vals[dname] = np.matmul(stel.d_d_varphi, vals[name])
+
+    # Evaluate in the input grid specified
+    var_splines = {}
+    var_names = ["nu", "curvature", "X1c", "X1s", "Y1c", "Y1s","X20", "X2c","X2s","Y20","Y2c","Y2s","Z20","Z2c","Z2s", \
+                "B20","dX1c_dvarphi","dX1s_dvarphi","dY1c_dvarphi","dY1s_dvarphi","dB20_dvarphi","dX20_dvarphi","dX2c_dvarphi", \
+                "dX2s_dvarphi", "dY20_dvarphi", "dY2c_dvarphi", "dY2s_dvarphi", "dZ20_dvarphi", "dZ2c_dvarphi", "dZ2s_dvarphi"]
+    for name in var_names:
+        x = vals[name]
+        var_splines[name] = stel.convert_to_spline(x)
+        vals[name] = var_splines[name](phi)
+
+    varphi = phi + vals["nu"]
+    chi = alpha + stel.iotaN * varphi 
+
+    B1 = B1c * np.cos(chi) + B1s * np.sin(chi)
+    B2 = vals["B20"] + stel.B2c * np.cos(2*chi) + stel.B2s * np.sin(2*chi)
+    dB1_dvarphi = (stel.iota-stel.iotaN) * B1c * np.sin(chi) - (stel.iota-stel.iotaN) * B1s * np.cos(chi)
+    dB1_dtheta = -B1c * np.sin(chi) + B1s * np.cos(chi)
+    dB2_dvarphi = vals["dB20_dvarphi"] + 2*(stel.iota-stel.iotaN)*stel.B2c * np.sin(2*chi) - 2*(stel.iota-stel.iotaN)*stel.B2s * np.cos(2*chi)
+    dB2_dtheta = -2*stel.B2c * np.sin(2*chi) + 2*stel.B2s * np.cos(2*chi)
+
+    Y1 = vals["Y1c"] * np.cos(chi) + vals["Y1s"] * np.sin(chi)
+    X1 = vals["X1c"] * np.cos(chi) + vals["X1s"] * np.sin(chi)
+    Y2 = vals["Y20"] + vals["Y2c"] * np.cos(2*chi) + vals["Y2s"] * np.sin(2*chi)
+    X2 = vals["X20"] + vals["X2c"] * np.cos(2*chi) + vals["X2s"] * np.sin(2*chi)
+    # Z2 = vals["Z20"] + vals["Z2c"] * np.cos(2*chi) + vals["Z2s"] * np.sin(2*chi)
+    # dX1_dvarphi = -stel.iotaN * vals["X1c"] * np.sin(chi) +stel.iotaN * vals["X1s"] * np.cos(chi) + vals["dX1c_dvarphi"] * np.cos(chi) + vals["dX1s_dvarphi"] * np.sin(chi)
+    dX1_dtheta = -vals["X1c"] * np.sin(chi) + vals["X1s"] * np.cos(chi)
+    # dY1_dvarphi = -stel.iotaN * vals["Y1c"] * np.sin(chi) + stel.iotaN * vals["Y1s"] * np.cos(chi) + vals["dY1c_dvarphi"] * np.cos(chi) + vals["dY1s_dvarphi"] * np.sin(chi)
+    dY1_dtheta = -vals["Y1c"] * np.sin(chi) + vals["Y1s"] * np.cos(chi)
+    # dX2_dvarphi = -2*stel.iotaN*X2c * np.sin(2*chi) + 2*stel.iotaN*vals["X2s"] * np.cos(2*chi) + vals["dX20_dvarphi"] + vals["dX2c_dvarphi"] * np.cos(2*chi) + vals["dX2s_dvarphi"] * np.sin(2*chi)
+    dX2_dtheta = -2*vals["X2c"] * np.sin(2*chi) + 2*vals["X2s"] * np.cos(2*chi)
+    # dY2_dvarphi = -2*stel.iotaN*vals["Y2c"] * np.sin(2*chi) + 2*stel.iotaN*vals["Y2s"] * np.cos(2*chi) + vals["dY20_dvarphi"] + vals["dY2c_dvarphi"] * np.cos(2*chi) + vals["dY2s_dvarphi"] * np.sin(2*chi)
+    dY2_dtheta = -2*vals["Y2c"] * np.sin(2*chi) + 2*vals["Y2s"] * np.cos(2*chi)
+    # dZ2_dvarphi = -2*stel.iotaN*vals["Z2c"] * np.sin(2*chi) + 2*stel.iotaN*vals["Z2s"] * np.cos(2*chi) + vals["dZ20_dvarphi"] + vals["dZ2c_dvarphi"] * np.cos(2*chi) + vals["dZ2s_dvarphi"] * np.sin(2*chi)
+    # dZ2_dtheta = -2*vals["Z2c"] * np.sin(2*chi) + 2*vals["Z2s"] * np.cos(2*chi)
+
+    # Evaluate the quantities required for AE to the right order
+    BxdBdotdpsi_1 = stel.spsi*B0*B0*dB1_dtheta*(Y1*dX1_dtheta - X1*dY1_dtheta)
+
+    BxdBdotdpsi_2 = stel.spsi*B0*(6*B1*dB1_dtheta*(Y1*dX1_dtheta-X1*dY1_dtheta) + B0*(2*Y2*dB1_dtheta*dX1_dtheta + Y1*dB2_dtheta*dX1_dtheta+\
+                        Y1*dB1_dtheta*dX2_dtheta-2*X2*dB1_dtheta*dY1_dtheta + 3*X1*X1*vals["curvature"]*dB1_dtheta*dY1_dtheta-\
+                        X1*(3*Y1*vals["curvature"]*dB1_dtheta*dX1_dtheta + dB2_dtheta*dY1_dtheta+dB1_dtheta*dY2_dtheta)))
+
+    BdotdB_1 = B0*(dB1_dvarphi + stel.iota * dB1_dtheta)/stel.G0
+    BdotdB_2 = (B1*(dB1_dvarphi + stel.iota * dB1_dtheta) + B0*(dB2_dvarphi + stel.iota * dB2_dtheta))/stel.G0
+
+    BxdBdotdalpha_m1 = B0*B1*(X1*dY1_dtheta-Y1*dX1_dtheta)
+    BxdBdotdalpha_0 = 2*B0*B2*(X1*dY1_dtheta-Y1*dX1_dtheta) + B1*B1*(-6*Y1*dX1_dtheta+6*X1*dY1_dtheta) + \
+                        B0*B1*(-2*Y2*dX1_dtheta - Y1*dX2_dtheta+2*X2*dY1_dtheta - 3*X1*X1*vals["curvature"]*dY1_dtheta+ \
+                        X1*(3*Y1*vals["curvature"]*dX1_dtheta+dY2_dtheta))
+
+    BxdBdotdpsi = r*BxdBdotdpsi_1 + r*r*BxdBdotdpsi_2
+    BxdBdotdalpha = BxdBdotdalpha_m1/r + BxdBdotdalpha_0
+    BdotdB = r*BdotdB_1 + r*r*BdotdB_2
+
+    # mod B
+    B20 = stel.B20
+    B   = stel.B0 * (1+r*stel.etabar*np.cos(alpha+stel.iotaN*phi)+r*r*(B20+stel.B2c*np.cos(2*(alpha+stel.iotaN*phi))+ \
+            stel.B2s*np.sin(2*(alpha+stel.iotaN*phi))))
+    
+    # Jacobian
+    jac_cheeky = (stel.G0+r*r*stel.G2+stel.iota*stel.I2)/B/B
+
+    return varphi, BxdBdotdalpha, BxdBdotdpsi, BdotdB, B, jac_cheeky
+
+
+
 class AE_gist:
     r"""
     Class which calculates data related to AE. Contains several plotting 
     routines, useful for assessing drifts and spatial structure of AE.
     """
     def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic',
-                 get_drifts=True,normalize='ft-vol',AE_lengthscale='q'):
+                 get_drifts=True,normalize='ft-vol',AE_lengthscale='None'):
         
         # import relevant data
-        self.L1         = gist_data.L1 
-        self.L2         = gist_data.L2
+        self.L1         = gist_data.L1
+        self.L2         = gist_data.L2 
         self.sqrtg      = gist_data.sqrtg
         self.modb       = gist_data.modb
         self.theta      = gist_data.theta
@@ -223,6 +404,8 @@ class AE_gist:
         self.taub   = tau_b_list
         self.lam    = lam_list
         self.k2     = k2
+
+    
         
 
     def calc_AE(self,omn,omt,omnigenous):
@@ -459,4 +642,143 @@ class AE_gist:
 
 
 
+class AE_pyQSC:
+    def __init__(self, stel_obj=None, name='precise QH', r=1e-6, alpha=0.0, N_turns=3, nphi=1001, 
+                 lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None'):
+        import matplotlib.pyplot as plt
+        # Construct stellarator
+        # if no stellarator given, use from paper
+        if stel_obj==None:
+            stel = Qsc.from_paper(name,nphi=nphi,B0=1)
+        else:
+            stel = stel_obj
 
+
+        # make phi array along which we follow field lines
+        phi0        = stel.varphi
+        phi_start   = (-N_turns*np.pi-alpha)/stel.iotaN
+        phi_end     = (N_turns*np.pi - alpha)/stel.iotaN
+        phi         = np.linspace(phi_start, phi_end, nphi)
+
+        _, BxdBdotdalpha, BxdBdotdpsi, _, B, _ = nae_geo(stel, r, phi, alpha)
+
+
+        # assign to self, same units as GIST uses
+        dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
+        dalphady    = 1/r # y = r * alpha
+        self.phi    = phi
+        self.L1     = BxdBdotdpsi/B/B/dpsidr
+        self.L2     = BxdBdotdalpha/B/B/dalphady
+        self.modB   = B
+        self.dldphi = 1.0/B # proportional to 1/B, see BAD manuscript.
+
+        my_dpdx = 0.0
+
+        
+        roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_pyQSC(self.phi,self.modB,self.dldphi,self.L1,self.L2,my_dpdx,lam_res,quad=False,interp_kind='cubic')
+        # assign to self
+        self.roots  = roots_list
+        self.wpsi   = wpsi_list
+        self.walpha = walpha_list
+        self.taub   = tau_b_list
+        self.lam    = lam_list
+        self.k2     = k2
+
+
+
+
+
+
+    def plot_geom(self):
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(2,2,figsize=(3.0*3.0,2.5*3.0),tight_layout=True)
+        ax[0,0].plot(self.phi,self.modB)
+        ax[0,1].plot(self.phi,self.dldphi)
+        ax[1,0].plot(self.phi,self.L2)
+        ax[1,1].plot(self.phi,self.L1)
+        ax[0,0].set_xlabel(r'$\phi$')
+        ax[0,1].set_xlabel(r'$\phi$')
+        ax[1,0].set_xlabel(r'$\phi$')
+        ax[1,1].set_xlabel(r'$\phi$')
+        ax[0,0].set_ylabel(r'$|B|$')
+        ax[0,1].set_ylabel(r'$\mathrm{d} \ell / \mathrm{d} \phi$')
+        ax[1,0].set_ylabel(r'$\frac{B \times \nabla B}{B^2}\cdot \nabla \alpha$')
+        ax[1,1].set_ylabel(r'$\frac{ B \times \nabla B }{B^2}\cdot \nabla \psi$')
+        plt.show()
+
+
+    def plot_precession(self,save=False,filename='AE_precession.eps'):
+        r"""
+        Plots the precession as a function of the bounce-points and k2.
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib        as mpl
+        plt.close('all')
+
+        font = {'family': 'sans-serif',
+                'weight': 'normal',
+                'size': 10}
+
+        mpl.rc('font', **font)
+
+        # reshape for plotting
+        walp_arr = np.nan*np.zeros([len(self.walpha),len(max(self.walpha,key = lambda x: len(x)))])
+        for i,j in enumerate(self.walpha):
+            walp_arr[i][0:len(j)] = j
+        wpsi_arr = np.nan*np.zeros([len(self.wpsi),len(max(self.wpsi,key = lambda x: len(x)))])
+        for i,j in enumerate(self.wpsi):
+            wpsi_arr[i][0:len(j)] = j
+        alp_l  = np.shape(walp_arr)[1]
+        k2_arr = np.repeat(self.k2,alp_l)
+        fig, ax = plt.subplots(2, 2, tight_layout=True, figsize=(2*3.5, 5.0))
+        ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].plot(self.k2,0.0*self.k2,color='red',linestyle='dashed')
+        ax[1,1].scatter(k2_arr,wpsi_arr,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].set_xlim(0,1)
+        ax[1,1].set_xlim(0,1)
+        ax[1,0].set_xlabel(r'$k^2$')
+        ax[1,1].set_xlabel(r'$k^2$')
+        ax[1,0].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='black')
+        ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla r \rangle$',color='black')
+
+
+        # now do plot as a function of bounce-angle
+        walpha_bounceplot = []
+        roots_bounceplot  = []
+        wpsi_bounceplot   = []
+        for lam_idx, lam_val in enumerate(self.lam):
+            root_at_lam = self.roots[lam_idx]
+            wpsi_at_lam = self.wpsi[lam_idx]
+            walpha_at_lam= self.walpha[lam_idx]
+            roots_bounceplot.extend(root_at_lam)
+            for idx in range(len(wpsi_at_lam)):
+                wpsi_bounceplot.extend([wpsi_at_lam[idx]])
+                wpsi_bounceplot.extend([wpsi_at_lam[idx]])
+                walpha_bounceplot.extend([walpha_at_lam[idx]])
+                walpha_bounceplot.extend([walpha_at_lam[idx]])
+
+        roots_ordered, wpsi_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, wpsi_bounceplot))))
+        roots_ordered, walpha_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, walpha_bounceplot))))
+        ax[0,0].plot(self.phi,self.modB,color='black')
+        ax001= ax[0,0].twinx()
+        ax001.plot(roots_ordered,walpha_bounceplot,color='tab:blue')
+        ax001.plot(np.asarray(roots_ordered),0.0*np.asarray(walpha_bounceplot),color='tab:red',linestyle='dashed')
+        ax[0,1].plot(self.phi,self.modB,color='black')
+        ax011= ax[0,1].twinx()
+        ax011.plot(roots_ordered,wpsi_bounceplot,color='tab:blue')
+        ax[0,0].set_xlim(self.phi.min(),self.phi.max())
+        ax[0,1].set_xlim(self.phi.min(),self.phi.max())
+        ax[0,0].set_xlabel(r'$\theta$')
+        ax[0,1].set_xlabel(r'$\theta$')
+        ax[0,0].set_ylabel(r'$B$')
+        ax[0,1].set_ylabel(r'$B$')
+        ax001.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='tab:blue')
+        ax011.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='tab:blue')
+        if save==True:
+            plt.savefig(filename,dpi=1000)
+        plt.show()
+
+
+NAE_AE = AE_pyQSC()
+NAE_AE.plot_geom()
+NAE_AE.plot_precession()
