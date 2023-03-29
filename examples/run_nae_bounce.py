@@ -8,6 +8,6 @@ from AEpy import ae_routines as ae
 import numpy as np
 
 stel = Qsc.from_paper("precise QA")
-NAE_AE = ae.AE_pyQSC(stel_obj = stel)
+NAE_AE = ae.AE_pyQSC(stel_obj = stel, nphi=int(1e3+1),N_turns=3,r=1e-8,lam_res=int(1e3))
 NAE_AE.plot_geom()
 NAE_AE.plot_precession()

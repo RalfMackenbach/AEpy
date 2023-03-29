@@ -662,15 +662,15 @@ class AE_pyQSC:
         varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky = nae_geo(stel, r, phi, alpha)
 
         # Transform to Boozer coordinates
-        from scipy.interpolate import interp1d
-
         BxdBdotdalpha_spline = interp1d(varphi, BxdBdotdalpha)
         BxdBdotdpsi_spline = interp1d(varphi, BxdBdotdpsi)
         B_spline = interp1d(varphi, B)
+        # jac_cheeky_spline = interp1d(varphi, jac_cheeky)
 
         BxdBdotdalpha = BxdBdotdalpha_spline(phi)
         BxdBdotdpsi = BxdBdotdpsi_spline(phi)
         B = B_spline(phi)
+        # jac_cheeky = jac_cheeky_spline(phi)
 
         # assign to self, same units as GIST uses
         dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
@@ -679,7 +679,7 @@ class AE_pyQSC:
         self.L1     = BxdBdotdpsi/B/B/dpsidr
         self.L2     = BxdBdotdalpha/B/B/dalphady
         self.modB   = B
-        self.dldphi = jac_cheeky * B # B/(B.grad(varphi))
+        self.dldphi = 1/B #jac_cheeky * B # 1/B when boozer phi is field-line following coordinate
 
         my_dpdx = 0.0
 
@@ -694,7 +694,42 @@ class AE_pyQSC:
         self.k2     = k2
 
 
+    def calc_AE(self,omn,omt,omnigenous):
+        # loop over all lambda
+        Delta_r = self.Delta_r
+        Delta_y = self.Delta_y
+        L_tot  = np.trapz(self.dldphi,self.phi)
+        ae_at_lam_list = []
+        if omnigenous==False:
+            for lam_idx, lam_val in enumerate(self.lam):
+                wpsi_at_lam     = Delta_y*self.wpsi[lam_idx]
+                walpha_at_lam   = Delta_r*self.walpha[lam_idx]
+                taub_at_lam     = self.taub[lam_idx]
+                integrand       = lambda x: AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x)
+                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=1e-6,epsabs=1e-20, limit=1000)
+                ae_at_lam_list.append(ae_at_lam/L_tot)
+        if omnigenous==True:
+            for lam_idx, lam_val in enumerate(self.lam):
+                walpha_at_lam   = Delta_r*self.walpha[lam_idx]
+                taub_at_lam     = self.taub[lam_idx]
+                dlnndx          = -omn 
+                dlnTdx          = -omt
+                c0 = Delta_r * (dlnndx - 3/2 * dlnTdx) / walpha_at_lam
+                c1 = 1.0 - Delta_r * dlnTdx / walpha_at_lam
+                ae_at_lam       = AE_per_lam(c0,c1,taub_at_lam,walpha_at_lam)
+                ae_at_lam_list.append(ae_at_lam/L_tot)
+        
+        self.ae_per_lam     = ae_at_lam_list
 
+        # now do integral over lam to find total AE
+        lam_arr   = np.asarray(self.lam).flatten()
+        ae_per_lam_summed = np.zeros_like(lam_arr)
+        for lam_idx, lam_val in enumerate(lam_arr):
+            ae_per_lam_summed[lam_idx] = np.sum(self.ae_per_lam[lam_idx])
+        ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
+        if self.normalize=='ft-vol':
+            ae_tot = ae_tot/self.ft_vol
+        self.ae_tot     = ae_tot
 
 
 
@@ -787,7 +822,3 @@ class AE_pyQSC:
             plt.savefig(filename,dpi=1000)
         plt.show()
 
-
-# NAE_AE = AE_pyQSC()
-# NAE_AE.plot_geom()
-# NAE_AE.plot_precession()
