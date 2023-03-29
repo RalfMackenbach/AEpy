@@ -645,6 +645,9 @@ class AE_pyQSC:
         # if no stellarator given, use from paper
         if stel_obj==None:
             stel = Qsc.from_paper(name,nphi=nphi,B0=1)
+            stel.spsi = -1
+            stel.zs = -stel.zs
+            stel.calculate()
         else:
             stel = stel_obj
 
@@ -655,9 +658,6 @@ class AE_pyQSC:
         phi_end     = (N_turns*np.pi - alpha)/stel.iotaN
         phi         = np.linspace(phi_start, phi_end, nphi)
 
-        stel.spsi = -1
-        stel.zs = -stel.zs
-        stel.calculate()
 
         varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky = nae_geo(stel, r, phi, alpha)
 
