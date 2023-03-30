@@ -651,6 +651,12 @@ class AE_pyQSC:
         else:
             stel = stel_obj
 
+        self.normalize = normalize
+
+        # set lengthscales
+        self.Delta_r = 1.0
+        self.Delta_y = 1.0
+
 
         # make phi array along which we follow field lines
         phi0        = stel.varphi
@@ -680,6 +686,9 @@ class AE_pyQSC:
         self.L2     = BxdBdotdalpha/B/B/dalphady
         self.modB   = B
         self.dldphi = 1/B #jac_cheeky * B # 1/B when boozer phi is field-line following coordinate
+
+        # calculate normalized flux-tube volume
+        self.ft_vol = np.trapz(self.dldphi/B,self.phi)/np.trapz(self.dldphi,self.phi)
 
         my_dpdx = 0.0
 
@@ -812,8 +821,8 @@ class AE_pyQSC:
         ax011.plot(roots_ordered,wpsi_bounceplot,color='tab:blue')
         ax[0,0].set_xlim(self.phi.min(),self.phi.max())
         ax[0,1].set_xlim(self.phi.min(),self.phi.max())
-        ax[0,0].set_xlabel(r'$\theta$')
-        ax[0,1].set_xlabel(r'$\theta$')
+        ax[0,0].set_xlabel(r'$\phi$')
+        ax[0,1].set_xlabel(r'$\phi$')
         ax[0,0].set_ylabel(r'$B$')
         ax[0,1].set_ylabel(r'$B$')
         ax001.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='tab:blue')
@@ -822,3 +831,90 @@ class AE_pyQSC:
             plt.savefig(filename,dpi=1000)
         plt.show()
 
+
+
+    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps'):
+        r"""
+        Plots AE per bouncewell
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib        as mpl
+        from    matplotlib   import cm
+        import  matplotlib.colors   as      mplc
+        plt.close('all')
+
+        font = {'family': 'sans-serif',
+                'weight': 'normal',
+                'size': 10}
+
+        mpl.rc('font', **font)
+        c = 0.5
+        fig ,ax = plt.subplots(1, 1, figsize=(6, 3),layout='constrained')
+        ax.set_xlim(min(self.phi)/np.pi,max(self.phi)/np.pi)
+
+        lam_arr   = np.asarray(self.lam).flatten()
+        ae_per_lam = self.ae_per_lam
+        list_flat = []
+        for val in ae_per_lam:
+            list_flat.extend(val)
+        max_ae_per_lam = max(list_flat)
+
+        roots=self.roots
+
+        cm_scale = lambda x: x
+        colors_plot = [cm.plasma(cm_scale(np.asarray(x) * 1.0/max_ae_per_lam)) for x in ae_per_lam]
+
+        # iterate over all values of lambda
+        for idx_lam, lam in enumerate(lam_arr):
+            b_val = 1/lam
+
+            # iterate over all bounce wells
+            for idx_bw, _ in enumerate(ae_per_lam[idx_lam]):
+                bws = roots[idx_lam]
+                # check if well crosses boundary
+                if(bws[2*idx_bw] > bws[2*idx_bw+1]):
+                    ax.plot([bws[2*idx_bw]/np.pi, max(self.theta)/np.pi], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
+                    ax.plot([min(self.theta)/np.pi, bws[2*idx_bw+1]/np.pi], [b_val, b_val],color=colors_plot[idx_lam][idx_bw])
+                # if not normal plot
+                else:
+                    ax.plot([bws[2*idx_bw]/np.pi, bws[2*idx_bw+1]/np.pi], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
+
+        # now do plot as a function of bounce-angle
+        walpha_bounceplot = []
+        roots_bounceplot  = []
+        wpsi_bounceplot   = []
+        for lam_idx, lam_val in enumerate(self.lam):
+            root_at_lam = self.roots[lam_idx]
+            wpsi_at_lam = self.wpsi[lam_idx]
+            walpha_at_lam= self.walpha[lam_idx]
+            roots_bounceplot.extend(root_at_lam)
+            for idx in range(len(wpsi_at_lam)):
+                wpsi_bounceplot.extend([wpsi_at_lam[idx]])
+                wpsi_bounceplot.extend([wpsi_at_lam[idx]])
+                walpha_bounceplot.extend([walpha_at_lam[idx]])
+                walpha_bounceplot.extend([walpha_at_lam[idx]])
+
+        roots_ordered, wpsi_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, wpsi_bounceplot))))
+        roots_ordered, walpha_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, walpha_bounceplot))))
+
+
+        roots_ordered = [root/np.pi for root in roots_ordered]
+
+        ax.plot(self.phi/np.pi,self.modB,color='black',linewidth=2)
+        ax2 = ax.twinx()
+        ax2.plot(roots_ordered, wpsi_bounceplot, 'cornflowerblue',linestyle='dashdot',label=r'$\omega_\psi$')
+        ax2.plot(roots_ordered, walpha_bounceplot, 'tab:green',linestyle='dashed',label=r'$\omega_\alpha$')
+        ax2.plot(self.phi/np.pi,self.phi*0.0,linestyle='dotted',color='black')
+        ax.set_ylabel(r'$B$')
+        ax2.set_ylabel(r'$\omega_\alpha, \quad \omega_\psi$')
+        ax2.tick_params(axis='y', colors='black',direction='in')
+        ax.set_xlabel(r'$\phi/\pi$')
+        ax.tick_params(axis='both',direction='in')
+        ax2.legend(loc='lower right')
+        cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_ae_per_lam, clip=False), cmap=cm.plasma), ticks=[0, max_ae_per_lam], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda$') #'%.3f'
+        cbar.ax.set_xticklabels([0, round(max_ae_per_lam, 1)])
+        if save==True:
+            plt.savefig(filename, format='png',
+                #This is recommendation for publication plots
+                dpi=1000)
+        plt.show()
