@@ -483,6 +483,7 @@ class AE_gist:
         """
         import matplotlib.pyplot as plt
         import matplotlib        as mpl
+        
         plt.close('all')
 
         font = {'family': 'sans-serif',
@@ -638,39 +639,52 @@ class AE_gist:
 
 
 class AE_pyQSC:
-    def __init__(self, stel_obj=None, name='precise QH', r=1e-6, alpha=0.0, N_turns=3, nphi=1001, 
+    def __init__(self, stel_obj=None, name='precise QH', r=[], alpha=0.0, N_turns=3, nphi=1001, 
                  lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None'):
         import matplotlib.pyplot as plt
         # Construct stellarator
         # if no stellarator given, use from paper
         if stel_obj==None:
             stel = Qsc.from_paper(name,nphi=nphi,B0=1)
+            stel.etabar = -np.abs(stel.etabar)
             stel.spsi = -1
             stel.zs = -stel.zs
             stel.calculate()
         else:
             stel = stel_obj
-
-
+        from termcolor import colored
+        if stel.etabar > 0:
+            stel.etabar = -np.abs(stel.etabar)
+            stel.calculate()
+            print(colored('Warning! The parameter etabar is supposed to be negative for the analytic comparison (so that the magnetic field well is centered about phi=0). The sign is changed and the near-axis equilibrium re-calculated.','red'))
         # make phi array along which we follow field lines
         phi0        = stel.varphi
         phi_start   = (-N_turns*np.pi-alpha)/stel.iotaN
         phi_end     = (N_turns*np.pi - alpha)/stel.iotaN
         phi         = np.linspace(phi_start, phi_end, nphi)
 
-
+        if not hasattr(stel, 'r'):
+            if r:
+                stel.r = r
+                print(colored('Set r in the near-axis construction to value specified explicitly to the constructor.', 'green'))
+            else:
+                stel.r = r
+                print(colored('Set r in the near-axis construction to default value 1e-6.', 'yellow'))
+        else:
+            r = stel.r
+            print(colored('Using r in the near-axis object given.', 'green'))
         varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky = nae_geo(stel, r, phi, alpha)
 
         # Transform to Boozer coordinates
-        from scipy.interpolate import interp1d
+        from scipy.interpolate import splev, splrep
 
-        BxdBdotdalpha_spline = interp1d(varphi, BxdBdotdalpha)
-        BxdBdotdpsi_spline = interp1d(varphi, BxdBdotdpsi)
-        B_spline = interp1d(varphi, B)
+        BxdBdotdalpha_spline = splrep(varphi, BxdBdotdalpha)
+        BxdBdotdpsi_spline = splrep(varphi, BxdBdotdpsi)
+        B_spline = splrep(varphi, B)
 
-        BxdBdotdalpha = BxdBdotdalpha_spline(phi)
-        BxdBdotdpsi = BxdBdotdpsi_spline(phi)
-        B = B_spline(phi)
+        BxdBdotdalpha = splev(phi, BxdBdotdalpha_spline)
+        BxdBdotdpsi = splev(phi, BxdBdotdpsi_spline)
+        B = splev(phi, B_spline)
 
         # assign to self, same units as GIST uses
         dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
@@ -686,6 +700,7 @@ class AE_pyQSC:
         
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_pyQSC(self.phi,self.modB,self.dldphi,self.L1,self.L2,my_dpdx,lam_res,quad=False,interp_kind='cubic')
         # assign to self
+        self.stel   = stel
         self.roots  = roots_list
         self.wpsi   = wpsi_list
         self.walpha = walpha_list
@@ -716,7 +731,7 @@ class AE_pyQSC:
         plt.show()
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps'):
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae = True):
         r"""
         Plots the precession as a function of the bounce-points and k2.
         """
@@ -740,8 +755,28 @@ class AE_pyQSC:
         alp_l  = np.shape(walp_arr)[1]
         k2_arr = np.repeat(self.k2,alp_l)
         fig, ax = plt.subplots(2, 2, tight_layout=True, figsize=(2*3.5, 5.0))
-        ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black', label='Numerical NAE')
         ax[1,0].plot(self.k2,0.0*self.k2,color='red',linestyle='dashed')
+        if nae:
+            from scipy import  special
+            E_k_K_k = special.ellipe(self.k2)/special.ellipk(self.k2)
+            wa = -self.stel.etabar/self.stel.B0*(2*E_k_K_k-1) # Negative sign because derivation for -etabar, no r because y
+            ax[1,0].plot(self.k2, wa, color = 'orange', linestyle='dashed', label='Theoretical NAE (1st order)')
+            wa += self.stel.r*(self.stel.B2c/self.stel.B0/self.stel.B0 * 0.5 /self.k2 / (1-self.k2) * ((1-16*self.k2+16*self.k2*self.k2)*E_k_K_k*E_k_K_k - \
+                    2*(1-9*self.k2+8*self.k2*self.k2)*E_k_K_k + (1-5*self.k2+4*self.k2*self.k2)) + \
+                    self.stel.B20_mean/self.stel.B0/self.stel.B0  * 0.5 /self.k2 / (1-self.k2) * (E_k_K_k*E_k_K_k + 2*(self.k2-1)*E_k_K_k + (1-5*self.k2+4*self.k2*self.k2)) +\
+                    self.stel.etabar*self.stel.etabar/self.stel.B0 * (-4*E_k_K_k*E_k_K_k + 2*(3-2*self.k2)*E_k_K_k + (2*self.k2-1)))
+            ax[1,0].plot(self.k2, wa, color = 'green', linestyle='dashed', label='Theoretical NAE (2nd order)')
+            # Use the ratio of the expressions from J_parallel directly. Still has divergences and deviations near bearly trapped
+            # wa_num = -self.stel.etabar/self.stel.B0*(2*E_k_K_k-1) + \
+            #             0.5*self.stel.r/self.stel.B0*0.5/self.k2/(1-self.k2)*(self.stel.B20_mean/self.stel.B0*((2*self.k2-1)*E_k_K_k+ \
+            #             (8*self.k2*self.k2-9*self.k2+1)) + self.stel.B2c/self.stel.B0*((2*self.k2-1)*E_k_K_k+(1-self.k2))+\
+            #             2*self.k2*self.stel.etabar*self.stel.etabar*(self.k2-1)*(2*(2*self.k2-1)*E_k_K_k-(1+2*self.k2)))
+            # wa_den = 1 - self.stel.r / self.stel.etabar * 0.5/self.k2/(self.k2-1)*(self.stel.B20_mean/self.stel.B0*(E_k_K_k+(self.k2-1))+\
+            #         self.stel.B2c/self.stel.B0*((1-16*self.k2+16*self.k2*self.k2)*E_k_K_k+(-1+9*self.k2-8*self.k2*self.k2)) + \
+            #         2*self.k2*(self.k2-1)*self.stel.etabar*self.stel.etabar*(4*E_k_K_k+(2*self.k2-3)))
+            # ax[1,0].plot(self.k2, wa_num/wa_den, color = 'blue', linestyle='dashed', label='Theoretical NAE better (2nd order)')
+            ax[1,0].legend()
         ax[1,1].scatter(k2_arr,wpsi_arr,s=0.2,marker='.',color='black',facecolors='black')
         ax[1,0].set_xlim(0,1)
         ax[1,1].set_xlim(0,1)
@@ -777,14 +812,16 @@ class AE_pyQSC:
         ax011.plot(roots_ordered,wpsi_bounceplot,color='tab:blue')
         ax[0,0].set_xlim(self.phi.min(),self.phi.max())
         ax[0,1].set_xlim(self.phi.min(),self.phi.max())
-        ax[0,0].set_xlabel(r'$\theta$')
-        ax[0,1].set_xlabel(r'$\theta$')
+        ax[0,0].set_xlabel(r'$\varphi$')
+        ax[0,1].set_xlabel(r'$\varphi$')
         ax[0,0].set_ylabel(r'$B$')
         ax[0,1].set_ylabel(r'$B$')
         ax001.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='tab:blue')
         ax011.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='tab:blue')
         if save==True:
             plt.savefig(filename,dpi=1000)
+        title_string = r'$r='+'{}'.format(self.stel.r) +'$'
+        plt.suptitle(title_string)
         plt.show()
 
 
