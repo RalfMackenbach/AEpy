@@ -16,7 +16,7 @@ def AE_per_lam_per_z(walpha,wpsi,wdia,tau_b,z):
     """
     geometry = ( wdia - walpha ) * walpha - wpsi**2 + np.sqrt( ( wdia - walpha )**2 + wpsi**2  ) * np.sqrt( walpha**2 + wpsi**2 )
     envelope = np.exp(-z) * np.power(z,5/2)
-    jacobian = tau_b 
+    jacobian = tau_b
     val      = geometry * envelope * jacobian
     return val/(4*np.sqrt(np.pi))
 
@@ -24,7 +24,7 @@ def AE_per_lam_per_z(walpha,wpsi,wdia,tau_b,z):
 def AE_per_lam(c0,c1,tau_b,walpha):
     r"""
     function containing the integral over z for exactly omnigenous systems.
-    This is the available energy per lambda. 
+    This is the available energy per lambda.
     """
     condition1 = np.logical_and((c0>=0),(c1<=0))
     condition2 = np.logical_and((c0>=0),(c1>0))
@@ -46,7 +46,7 @@ def all_drifts(f,h,h1,h2,x,is_func=False,sinhtanh=False):
     I2 = ∫h2(x)/sqrt(f(x)) dx,
     and returns all of these values.
     Can be done by either quad if is_func=True, or
-    gtrapz if is_func=False. When is_func=True 
+    gtrapz if is_func=False. When is_func=True
     both f and h need to be functions. Otherwise
     they should be arrays. Also returns roots
      Args:
@@ -72,7 +72,7 @@ def all_drifts(f,h,h1,h2,x,is_func=False,sinhtanh=False):
         I1 = bounce_int._bounce_integral(f,h1,x,index,root,is_func=False,sinhtanh=False)
         I2 = bounce_int._bounce_integral(f,h2,x,index,root,is_func=False,sinhtanh=False)
     # if is_func is true, use function for both root finding and integration
-    if is_func==True: 
+    if is_func==True:
         index,root = bounce_int._find_zeros(f,x,is_func=True)
         first_well = bounce_int._check_first_well(f,x,index,is_func=True)
         if first_well==False:
@@ -86,7 +86,7 @@ def all_drifts(f,h,h1,h2,x,is_func=False,sinhtanh=False):
 
 def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kind='cubic'):
     r"""
-    Calculate the drift given GIST input arrays. 
+    Calculate the drift given GIST input arrays.
 
     """
     # make dldzeta
@@ -102,11 +102,11 @@ def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
         L2_f    = interp1d(theta,L2,kind=interp_kind)
         dldz_f  = interp1d(theta,dldz,kind=interp_kind)
         modb_f  = interp1d(theta,modb,kind=interp_kind)
-        # we're going to make a much finer resolved 
+        # we're going to make a much finer resolved
         # theta_arr to evaluate the function on
         theta   = np.linspace(theta.min(),theta.max(),1000)
 
-        # loop over lambda 
+        # loop over lambda
         # and save results in list of lists
         wpsi_list   = []
         walpha_list = []
@@ -136,7 +136,7 @@ def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
     # routine if quad is False:
     if quad==False:
-        # loop over lambda 
+        # loop over lambda
         # and save results in list of lists
         wpsi_list   = []
         walpha_list = []
@@ -162,8 +162,8 @@ def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
             tau_b_list.append(tau_b)
             roots_list.append(roots)
             lam_list.append([lam_val])
-        k2         = (1 - lam_arr*np.amin(modb))*np.amax(modb)/(np.amax(modb)-np.amin(modb)) 
-    
+        k2         = (1 - lam_arr*np.amin(modb))*np.amax(modb)/(np.amax(modb)-np.amin(modb))
+
     return roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2
 
 
@@ -171,7 +171,7 @@ def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kind='cubic'):
     r"""
-    Calculate the drift given pyQSC input arrays. 
+    Calculate the drift given pyQSC input arrays.
 
     """
     # make lam arr
@@ -185,11 +185,11 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
         L2_f    = interp1d(theta,L2,kind=interp_kind)
         dldz_f  = interp1d(theta,dldz,kind=interp_kind)
         modb_f  = interp1d(theta,modb,kind=interp_kind)
-        # we're going to make a much finer resolved 
+        # we're going to make a much finer resolved
         # theta_arr to evaluate the function on
         theta   = np.linspace(theta.min(),theta.max(),1000)
 
-        # loop over lambda 
+        # loop over lambda
         # and save results in list of lists
         wpsi_list   = []
         walpha_list = []
@@ -219,7 +219,7 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
     # routine if quad is False:
     if quad==False:
-        # loop over lambda 
+        # loop over lambda
         # and save results in list of lists
         wpsi_list   = []
         walpha_list = []
@@ -245,15 +245,15 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
             tau_b_list.append(tau_b)
             roots_list.append(roots)
             lam_list.append([lam_val])
-        k2         = (1 - lam_arr*np.amin(modb))*np.amax(modb)/(np.amax(modb)-np.amin(modb)) 
-    
+        k2         = (1 - lam_arr*np.amin(modb))*np.amax(modb)/(np.amax(modb)-np.amin(modb))
+
     return roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2
 
 
 
 
 def nae_geo(stel, r, phi, alpha):
-  
+
     # B x grad(B) . grad(psi)
     # alpha = 0
 
@@ -270,7 +270,7 @@ def nae_geo(stel, r, phi, alpha):
     for name in var_names:
         vals[name] = getattr(stel,name)
 
-    # Compute derivatives 
+    # Compute derivatives
     var_names = ["X1c","X1s","Y1c","Y1s","B20","X20","X2c", \
                 "X2s", "Y20", "Y2c", "Y2s", "Z20", "Z2c", "Z2s"]
     dvar_names = ["dX1c_dvarphi","dX1s_dvarphi","dY1c_dvarphi","dY1s_dvarphi","dB20_dvarphi","dX20_dvarphi","dX2c_dvarphi", \
@@ -290,7 +290,7 @@ def nae_geo(stel, r, phi, alpha):
         vals[name] = var_splines[name](phi)
 
     varphi = phi + vals["nu"]
-    chi = alpha + stel.iotaN * varphi 
+    chi = alpha + stel.iotaN * varphi
 
     B1 = B1c * np.cos(chi) + B1s * np.sin(chi)
     B2 = vals["B20"] + stel.B2c * np.cos(2*chi) + stel.B2s * np.sin(2*chi)
@@ -336,7 +336,7 @@ def nae_geo(stel, r, phi, alpha):
 
     # mod B
     B   = B0 + r * B1 + r*r * B2
-    
+
     # Jacobian
     jac_cheeky = (stel.G0+r*r*stel.G2+stel.iota*stel.I2)/B/B
 
@@ -346,15 +346,15 @@ def nae_geo(stel, r, phi, alpha):
 
 class AE_gist:
     r"""
-    Class which calculates data related to AE. Contains several plotting 
+    Class which calculates data related to AE. Contains several plotting
     routines, useful for assessing drifts and spatial structure of AE.
     """
     def __init__(self, gist_data, lam_res=1000, quad=False, interp_kind='cubic',
                  get_drifts=True,normalize='ft-vol',AE_lengthscale='None'):
-        
+
         # import relevant data
         self.L1         = gist_data.L1
-        self.L2         = gist_data.L2 
+        self.L2         = gist_data.L2
         self.sqrtg      = gist_data.sqrtg
         self.modb       = gist_data.modb
         self.theta      = gist_data.theta
@@ -380,7 +380,7 @@ class AE_gist:
         if AE_lengthscale=='q':
             self.Delta_x = self.q0 * self.Delta_x
             self.Delta_y = self.q0 * self.Delta_y
-        
+
 
 
         if get_drifts==True:
@@ -400,8 +400,8 @@ class AE_gist:
         self.lam    = lam_list
         self.k2     = k2
 
-    
-        
+
+
 
     def calc_AE(self,omn,omt,omnigenous):
         # loop over all lambda
@@ -421,13 +421,13 @@ class AE_gist:
             for lam_idx, lam_val in enumerate(self.lam):
                 walpha_at_lam   = Delta_x*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
-                dlnndx          = -omn 
+                dlnndx          = -omn
                 dlnTdx          = -omt
                 c0 = Delta_x * (dlnndx - 3/2 * dlnTdx) / walpha_at_lam
                 c1 = 1.0 - Delta_x * dlnTdx / walpha_at_lam
                 ae_at_lam       = AE_per_lam(c0,c1,taub_at_lam,walpha_at_lam)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
-        
+
         self.ae_per_lam     = ae_at_lam_list
 
         # now do integral over lam to find total AE
@@ -459,7 +459,7 @@ class AE_gist:
             for lam_idx, lam_val in enumerate(self.lam):
                 walpha_at_lam   = Delta_x*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
-                dlnndx          = -omn 
+                dlnndx          = -omn
                 dlnTdx          = -omt
                 c0 = Delta_x * (dlnndx - 3/2 * dlnTdx) / walpha_at_lam
                 c1 = 1.0 - Delta_x * dlnTdx / walpha_at_lam
@@ -483,6 +483,7 @@ class AE_gist:
         """
         import matplotlib.pyplot as plt
         import matplotlib        as mpl
+
         plt.close('all')
 
         font = {'family': 'sans-serif',
@@ -548,7 +549,7 @@ class AE_gist:
             plt.savefig(filename,dpi=1000)
         plt.show()
 
-    
+
     def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps'):
         r"""
         Plots AE per bouncewell
@@ -638,13 +639,14 @@ class AE_gist:
 
 
 class AE_pyQSC:
-    def __init__(self, stel_obj=None, name='precise QH', r=1e-6, alpha=0.0, N_turns=3, nphi=1001, 
+    def __init__(self, stel_obj=None, name='precise QH', r=[], alpha=0.0, N_turns=3, nphi=1001,
                  lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None'):
         import matplotlib.pyplot as plt
         # Construct stellarator
         # if no stellarator given, use from paper
         if stel_obj==None:
             stel = Qsc.from_paper(name,nphi=nphi,B0=1)
+            stel.etabar = -np.abs(stel.etabar)
             stel.spsi = -1
             stel.zs = -stel.zs
             stel.calculate()
@@ -664,19 +666,28 @@ class AE_pyQSC:
         phi_end     = (N_turns*np.pi - alpha)/stel.iotaN
         phi         = np.linspace(phi_start, phi_end, nphi)
 
-
+        if not hasattr(stel, 'r'):
+            if r:
+                stel.r = r
+                print(colored('Set r in the near-axis construction to value specified explicitly to the constructor.', 'green'))
+            else:
+                stel.r = r
+                print(colored('Set r in the near-axis construction to default value 1e-6.', 'yellow'))
+        else:
+            r = stel.r
+            print(colored('Using r in the near-axis object given.', 'green'))
         varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky = nae_geo(stel, r, phi, alpha)
 
         # Transform to Boozer coordinates
-        BxdBdotdalpha_spline = interp1d(varphi, BxdBdotdalpha)
-        BxdBdotdpsi_spline = interp1d(varphi, BxdBdotdpsi)
-        B_spline = interp1d(varphi, B)
-        # jac_cheeky_spline = interp1d(varphi, jac_cheeky)
+        from scipy.interpolate import splev, splrep
 
-        BxdBdotdalpha = BxdBdotdalpha_spline(phi)
-        BxdBdotdpsi = BxdBdotdpsi_spline(phi)
-        B = B_spline(phi)
-        # jac_cheeky = jac_cheeky_spline(phi)
+        BxdBdotdalpha_spline = splrep(varphi, BxdBdotdalpha)
+        BxdBdotdpsi_spline = splrep(varphi, BxdBdotdpsi)
+        B_spline = splrep(varphi, B)
+
+        BxdBdotdalpha = splev(phi, BxdBdotdalpha_spline)
+        BxdBdotdpsi = splev(phi, BxdBdotdpsi_spline)
+        B = splev(phi, B_spline)
 
         # assign to self, same units as GIST uses
         dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
@@ -692,9 +703,10 @@ class AE_pyQSC:
 
         my_dpdx = 0.0
 
-        
+
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_pyQSC(self.phi,self.modB,self.dldphi,self.L1,self.L2,my_dpdx,lam_res,quad=False,interp_kind='cubic')
         # assign to self
+        self.stel   = stel
         self.roots  = roots_list
         self.wpsi   = wpsi_list
         self.walpha = walpha_list
@@ -721,13 +733,13 @@ class AE_pyQSC:
             for lam_idx, lam_val in enumerate(self.lam):
                 walpha_at_lam   = Delta_r*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
-                dlnndx          = -omn 
+                dlnndx          = -omn
                 dlnTdx          = -omt
                 c0 = Delta_r * (dlnndx - 3/2 * dlnTdx) / walpha_at_lam
                 c1 = 1.0 - Delta_r * dlnTdx / walpha_at_lam
                 ae_at_lam       = AE_per_lam(c0,c1,taub_at_lam,walpha_at_lam)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
-        
+
         self.ae_per_lam     = ae_at_lam_list
 
         # now do integral over lam to find total AE
@@ -760,7 +772,7 @@ class AE_pyQSC:
         plt.show()
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps'):
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae = True):
         r"""
         Plots the precession as a function of the bounce-points and k2.
         """
@@ -784,8 +796,28 @@ class AE_pyQSC:
         alp_l  = np.shape(walp_arr)[1]
         k2_arr = np.repeat(self.k2,alp_l)
         fig, ax = plt.subplots(2, 2, tight_layout=True, figsize=(2*3.5, 5.0))
-        ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black', label='Numerical NAE')
         ax[1,0].plot(self.k2,0.0*self.k2,color='red',linestyle='dashed')
+        if nae:
+            from scipy import  special
+            E_k_K_k = special.ellipe(self.k2)/special.ellipk(self.k2)
+            wa = -self.stel.etabar/self.stel.B0*(2*E_k_K_k-1) # Negative sign because derivation for -etabar, no r because y
+            ax[1,0].plot(self.k2, wa, color = 'orange', linestyle='dashed', label='Theoretical NAE (1st order)')
+            wa += self.stel.r*(self.stel.B2c/self.stel.B0/self.stel.B0 * 0.5 /self.k2 / (1-self.k2) * ((1-16*self.k2+16*self.k2*self.k2)*E_k_K_k*E_k_K_k - \
+                    2*(1-9*self.k2+8*self.k2*self.k2)*E_k_K_k + (1-5*self.k2+4*self.k2*self.k2)) + \
+                    self.stel.B20_mean/self.stel.B0/self.stel.B0  * 0.5 /self.k2 / (1-self.k2) * (E_k_K_k*E_k_K_k + 2*(self.k2-1)*E_k_K_k + (1-5*self.k2+4*self.k2*self.k2)) +\
+                    self.stel.etabar*self.stel.etabar/self.stel.B0 * (-4*E_k_K_k*E_k_K_k + 2*(3-2*self.k2)*E_k_K_k + (2*self.k2-1)))
+            ax[1,0].plot(self.k2, wa, color = 'green', linestyle='dashed', label='Theoretical NAE (2nd order)')
+            # Use the ratio of the expressions from J_parallel directly. Still has divergences and deviations near bearly trapped
+            # wa_num = -self.stel.etabar/self.stel.B0*(2*E_k_K_k-1) + \
+            #             0.5*self.stel.r/self.stel.B0*0.5/self.k2/(1-self.k2)*(self.stel.B20_mean/self.stel.B0*((2*self.k2-1)*E_k_K_k+ \
+            #             (8*self.k2*self.k2-9*self.k2+1)) + self.stel.B2c/self.stel.B0*((2*self.k2-1)*E_k_K_k+(1-self.k2))+\
+            #             2*self.k2*self.stel.etabar*self.stel.etabar*(self.k2-1)*(2*(2*self.k2-1)*E_k_K_k-(1+2*self.k2)))
+            # wa_den = 1 - self.stel.r / self.stel.etabar * 0.5/self.k2/(self.k2-1)*(self.stel.B20_mean/self.stel.B0*(E_k_K_k+(self.k2-1))+\
+            #         self.stel.B2c/self.stel.B0*((1-16*self.k2+16*self.k2*self.k2)*E_k_K_k+(-1+9*self.k2-8*self.k2*self.k2)) + \
+            #         2*self.k2*(self.k2-1)*self.stel.etabar*self.stel.etabar*(4*E_k_K_k+(2*self.k2-3)))
+            # ax[1,0].plot(self.k2, wa_num/wa_den, color = 'blue', linestyle='dashed', label='Theoretical NAE better (2nd order)')
+            ax[1,0].legend()
         ax[1,1].scatter(k2_arr,wpsi_arr,s=0.2,marker='.',color='black',facecolors='black')
         ax[1,0].set_xlim(0,1)
         ax[1,1].set_xlim(0,1)
@@ -821,14 +853,16 @@ class AE_pyQSC:
         ax011.plot(roots_ordered,wpsi_bounceplot,color='tab:blue')
         ax[0,0].set_xlim(self.phi.min(),self.phi.max())
         ax[0,1].set_xlim(self.phi.min(),self.phi.max())
-        ax[0,0].set_xlabel(r'$\phi$')
-        ax[0,1].set_xlabel(r'$\phi$')
+        ax[0,0].set_xlabel(r'$\varphi$')
+        ax[0,1].set_xlabel(r'$\varphi$')
         ax[0,0].set_ylabel(r'$B$')
         ax[0,1].set_ylabel(r'$B$')
         ax001.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='tab:blue')
         ax011.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='tab:blue')
         if save==True:
             plt.savefig(filename,dpi=1000)
+        title_string = r'$r='+'{}'.format(self.stel.r) +'$'
+        plt.suptitle(title_string)
         plt.show()
 
 
