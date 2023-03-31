@@ -4,6 +4,7 @@ from scipy.interpolate import interp1d
 from BAD import bounce_int
 import numpy as np
 from qsc import Qsc
+from termcolor import colored
 
 
 def w_diamag(dlnndx,dlnTdx,z):
