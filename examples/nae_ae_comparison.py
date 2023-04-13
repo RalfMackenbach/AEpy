@@ -15,7 +15,7 @@ rc('text', usetex=True)
 
 
 nphi = int(1e3+1)
-names = ["precise QA","precise QA+well","precise QH","precise QH+well,"]
+names = ["precise QA","precise QA+well","precise QH","precise QH+well"]
 r_arr =  np.logspace(-2,-1,10)
 
 

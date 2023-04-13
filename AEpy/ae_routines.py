@@ -1142,10 +1142,12 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         E_k_K_k = special.ellipe(AE_obj.k2)/special.ellipk(AE_obj.k2)
         wa = -AE_obj.stel.etabar/AE_obj.stel.B0*(2*E_k_K_k-1) # Negative sign because derivation for -etabar, no r because y
         ax[1,0].plot(AE_obj.k2, wa, color = 'orange', linestyle='dotted', label='NAE (1st order)')
-        wa += AE_obj.stel.r*(AE_obj.stel.B2c/AE_obj.stel.B0/AE_obj.stel.B0 * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * ((1-16*AE_obj.k2+16*AE_obj.k2*AE_obj.k2)*E_k_K_k*E_k_K_k - \
-                2*(1-9*AE_obj.k2+8*AE_obj.k2*AE_obj.k2)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) + \
-                AE_obj.stel.B20_mean/AE_obj.stel.B0/AE_obj.stel.B0  * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * (E_k_K_k*E_k_K_k + 2*(AE_obj.k2-1)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) +\
-                AE_obj.stel.etabar*AE_obj.stel.etabar/AE_obj.stel.B0 * (-4*E_k_K_k*E_k_K_k + 2*(3-2*AE_obj.k2)*E_k_K_k + (2*AE_obj.k2-1)))
+        # wa += AE_obj.stel.r*(AE_obj.stel.B2c/AE_obj.stel.B0/AE_obj.stel.B0 * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * ((1-16*AE_obj.k2+16*AE_obj.k2*AE_obj.k2)*E_k_K_k*E_k_K_k - \
+        #         2*(1-9*AE_obj.k2+8*AE_obj.k2*AE_obj.k2)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) + \
+        #         AE_obj.stel.B20_mean/AE_obj.stel.B0/AE_obj.stel.B0  * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * (E_k_K_k*E_k_K_k + 2*(AE_obj.k2-1)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) +\
+        #         AE_obj.stel.etabar*AE_obj.stel.etabar/AE_obj.stel.B0 * (-4*E_k_K_k*E_k_K_k + 2*(3-2*AE_obj.k2)*E_k_K_k + (2*AE_obj.k2-1)))
+        wa += -AE_obj.stel.r*AE_obj.stel.etabar/AE_obj.stel.B0*(2/AE_obj.stel.etabar*AE_obj.stel.B20_mean+AE_obj.stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*AE_obj.k2)*E_k_K_k + (1-2*AE_obj.k2)) +\
+                                                               2/AE_obj.stel.etabar*AE_obj.stel.B2c*(2*E_k_K_k*E_k_K_k - 4*AE_obj.k2*E_k_K_k + (2*AE_obj.k2-1)))
         ax[1,0].plot(AE_obj.k2, wa, color = 'green', linestyle='dashed', label='NAE (2nd order)')
         ax[1,0].legend()
     if save==True:
@@ -1170,7 +1172,7 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps'):
 
     mpl.rc('font', **font)
     c = 0.5
-    fig ,ax = plt.subplots(1, 1, figsize=(6, 3),layout='constrained')
+    fig ,ax = plt.subplots(1, 1, figsize=(6, 3)) # ,layout='constrained')
     ax.set_xlim(min(AE_obj.z)/np.pi,max(AE_obj.z)/np.pi)
 
     lam_arr   = np.asarray(AE_obj.lam).flatten()
