@@ -10,7 +10,7 @@ rc('font',**{'family':'serif','serif':['Computer Modern Serif'], 'size': 12})
 rc('text', usetex=True)
 
 
-
+print('Doing NAE plots')
 ### NAE plots ###
 # make base-case stellarator
 nphi = int(2e3+1)
@@ -30,6 +30,7 @@ NAE_AE.plot_AE_per_lam()
 
 
 
+print('Doing GIST plots')
 ### GIST plots ###
 # Do plots for HSX
 file = '../tests/gist_files/gist_HSX.txt'
@@ -40,16 +41,16 @@ gist_file.plot_geometry()
 ae_dat = ae.AE_gist(gist_file,normalize='ft_vol',AE_lengthscale='None',lam_res=1001)
 ae_dat.calc_AE(omn=3.0,omt=0.0,omnigenous=False)
 ae_dat.plot_precession()
-ae_dat.plot_AE_per_lam(save=False)
+ae_dat.plot_AE_per_lam()
 
 
 
-
+print('Doing VMEC plots')
 ### VMEC plots ###
 # Do plots for NCSX
 file = '../tests/vmec_files/input.ncsx'
 vmec = Vmec(file)
-ae_dat = ae.AE_vmec(vmec,s_val=1/4,n_turns=1)
+ae_dat = ae.AE_vmec(vmec,s_val=1/2,n_turns=1,plot=True)
 ae_dat.calc_AE(omn=-3.0,omt=0.0,omnigenous=False)
 ae_dat.plot_precession()
 ae_dat.plot_AE_per_lam()

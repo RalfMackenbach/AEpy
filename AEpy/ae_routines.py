@@ -289,7 +289,7 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic'):
     r"""
-    Calculate the drift given pyQSC input arrays.
+    Calculate the drift given vmec input arrays.
 
     """
     # make lam arr
@@ -347,7 +347,7 @@ def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='
         lam_list    = []
         # start the loop
         for lam_idx, lam_val in enumerate(lam_arr):
-            # construct interpolated drift for lambda vals
+            # construct drift arrays
             f  = 1 - lam_val * modb
             h  = dldz
             hx =( lam_val * L1 + 2 * (1/modb - lam_val) * K1 ) * dldz
@@ -424,7 +424,7 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
     grad_d_alpha    = (fieldline.B_cross_grad_B_dot_grad_alpha).flatten()
     curv_d_psi      = (fieldline.B_cross_kappa_dot_grad_psi).flatten()
     curv_d_alpha    = (fieldline.B_cross_kappa_dot_grad_alpha).flatten()
-    jac             = (fieldline.B_sup_phi).flatten()
+    jac             = (fieldline.B_sup_theta_pest).flatten()
     Bhat            = modB/Bref
     
     dpsidr          = Bref * Lref * np.sqrt(s_val)
@@ -826,8 +826,8 @@ class AE_pyQSC:
 
 class AE_vmec:
     def __init__(self, vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3,plot=False):
-        import matplotlib.pyplot as plt
-        from simsopt.mhd.vmec import Vmec
+        import matplotlib.pyplot    as      plt
+        from simsopt.mhd.vmec       import  Vmec
 
         L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha,phi_center,gridpoints,n_turns,plot)
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic')
