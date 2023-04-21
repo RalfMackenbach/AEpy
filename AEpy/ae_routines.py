@@ -436,10 +436,8 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
     K2              = Lref * curv_d_alpha/modB/dalphady
     dldtheta        = modB/jac
 
-    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr
+    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
 
-
-    
 
 
 def nae_geo(stel, r, phi, alpha):
@@ -531,6 +529,7 @@ def nae_geo(stel, r, phi, alpha):
     jac_cheeky = (stel.G0+r*r*stel.G2+stel.iota*stel.I2)/B/B
 
     return varphi, BxdBdotdalpha, BxdBdotdpsi, BdotdB, B, jac_cheeky, B2
+
 
 ######################################################
 ######################################################
@@ -694,7 +693,7 @@ class AE_gist:
 
 class AE_pyQSC:
     def __init__(self, stel_obj=None, name='precise QH', r=[], alpha=0.0, N_turns=3, nphi=1001,
-                 lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None'):
+                 lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=1.0):
         import matplotlib.pyplot as plt
         # Construct stellarator
         # if no stellarator given, use from paper
@@ -748,8 +747,9 @@ class AE_pyQSC:
         dalphady    = 1/r # y = r * alpha
         self.phi    = phi
         self.z      = phi
-        self.L1     = BxdBdotdpsi/B/B/dpsidr
-        self.L2     = BxdBdotdalpha/B/B/dalphady
+        self.L1     = a_minor*BxdBdotdpsi/B/B/dpsidr
+        self.L2     = a_minor*BxdBdotdalpha/B/B/dalphady
+        self.a_minor= a_minor
         self.modb   = B
         self.dldphi = 1/B #jac_cheeky * B # 1/B when boozer phi is field-line following coordinate
         self.B2     = B2
@@ -758,7 +758,7 @@ class AE_pyQSC:
         # calculate normalized flux-tube volume
         self.ft_vol = np.trapz(self.dldphi/B,self.phi)/np.trapz(self.dldphi,self.phi)
 
-        self.my_dpdx = stel.r**2 * stel.p2
+        self.my_dpdx = 0.0 #stel.r**2 * stel.p2
 
 
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_pyQSC(self.phi,self.modb,self.dldphi,self.L1,self.L2,self.my_dpdx,lam_res,quad=False,interp_kind='cubic')
@@ -824,21 +824,18 @@ class AE_pyQSC:
         plot_AE_per_lam_func(self,save=save,filename=filename)
 
 
-
-
-
-
 class AE_vmec:
     def __init__(self, vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3,plot=False):
         import matplotlib.pyplot as plt
         from simsopt.mhd.vmec import Vmec
 
-        L1,K1,L2,K2,dldz,modb,theta = vmec_geo(vmec,s_val,alpha,phi_center,gridpoints,n_turns,plot)
+        L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha,phi_center,gridpoints,n_turns,plot)
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic')
         self.z      = theta 
         self.modb   = modb
         self.dldz = dldz
         self.normalize = 'ft_vol'
+        self.Lref      = Lref
         # assign to self
         self.roots  = roots_list
         self.wpsi   = wpsi_list
@@ -900,7 +897,6 @@ class AE_vmec:
         plot_AE_per_lam_func(self,save=save,filename=filename)
 
 
-
 ######################################################
 ######################################################
 ######################################################
@@ -937,6 +933,8 @@ class AE_vmec:
 
 def plot_surface_and_fl(vmec,fl,s_val,transparant=False,trans_val=0.9,title=''):
     import math
+    from    matplotlib          import  cm
+    from mayavi import mlab
     phi = vmec.wout.phi
     iotaf = vmec.wout.iotaf
     presf = vmec.wout.presf
@@ -1069,6 +1067,7 @@ def plot_surface_and_fl(vmec,fl,s_val,transparant=False,trans_val=0.9,title=''):
     mlab.close(all=True)
 
 
+
 def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False):
     r"""
     Plots the precession as a function of the bounce-points and k2.
@@ -1139,8 +1138,8 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
     ax011.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='tab:blue')
     if nae:
         from scipy import  special
-        E_k_K_k = special.ellipe(AE_obj.k2)/special.ellipk(AE_obj.k2)
-        wa = -AE_obj.stel.etabar/AE_obj.stel.B0*(2*E_k_K_k-1) # Negative sign because derivation for -etabar, no r because y
+        E_k_K_k =  special.ellipe(AE_obj.k2)/special.ellipk(AE_obj.k2)
+        wa = AE_obj.a_minor * -AE_obj.stel.etabar/AE_obj.stel.B0*(2*E_k_K_k-1) # Negative sign because derivation for -etabar, no r because y
         ax[1,0].plot(AE_obj.k2, wa, color = 'orange', linestyle='dotted', label='NAE (1st order)')
         # wa += AE_obj.stel.r*(AE_obj.stel.B2c/AE_obj.stel.B0/AE_obj.stel.B0 * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * ((1-16*AE_obj.k2+16*AE_obj.k2*AE_obj.k2)*E_k_K_k*E_k_K_k - \
         #         2*(1-9*AE_obj.k2+8*AE_obj.k2*AE_obj.k2)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) + \
@@ -1241,7 +1240,6 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps'):
             #This is recommendation for publication plots
             dpi=1000)
     plt.show()
-
 
 
 
