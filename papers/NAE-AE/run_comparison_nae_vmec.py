@@ -3,7 +3,7 @@ from    qsc     import  Qsc
 from    AEpy    import  ae_routines as      ae
 from    simsopt.util.mpi            import  MpiPartition
 from    simsopt.mhd.vmec            import  Vmec
-from    simsopt.mhd                 import  vmec_fieldlines
+from    simsopt.mhd.vmec_diagnostics import  vmec_fieldlines
 import  matplotlib.pyplot           as      plt
 
 
@@ -12,7 +12,7 @@ def nae_ae_asymp(stel,omn,a_minor):
     ae_fac  = 0.666834
     r       = stel.r
     eta     = np.abs(stel.etabar)
-    prefac  = 1 / (4 * np.sqrt(np.pi))
+    prefac  = np.sqrt(2) / (3 * np.pi)
     return prefac * np.sqrt(r/ a_minor**2 / eta) * (omn)**3 * ae_fac
 
 
@@ -20,7 +20,7 @@ def nae_ae_asymp(stel,omn,a_minor):
 omnigenous = True
 
 # make stellarator
-file = 'wout_precise_QA_000_000000.nc'
+file = "../../../Python/Trapped_electron/configs/wout_precise_QA.nc"
 mpi = MpiPartition(8)
 mpi.write()
 vmec = Vmec(file,mpi=mpi,verbose=True)
