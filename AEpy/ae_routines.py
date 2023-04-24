@@ -844,8 +844,8 @@ class AE_pyQSC:
         plot_geom_nae(self)
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None):
-        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel)
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0):
+        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel,alpha=alpha)
 
 
 
@@ -920,8 +920,8 @@ class AE_vmec:
         self.ae_tot     = ae_tot
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None):
-        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel)
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0):
+        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel,alpha=alpha)
 
 
 
@@ -1100,7 +1100,7 @@ def plot_surface_and_fl(vmec,fl,s_val,transparant=False,trans_val=0.9,title=''):
 
 
 
-def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None):
+def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0):
     r"""
     Plots the precession as a function of the bounce-points and k2.
     """
@@ -1125,15 +1125,16 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
     alp_l  = np.shape(walp_arr)[1]
     k2_arr = np.repeat(AE_obj.k2,alp_l)
     fig, ax = plt.subplots(2, 2, tight_layout=True, figsize=(2*3.5, 5.0))
-    ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black')
-    ax[1,0].plot(AE_obj.k2,0.0*AE_obj.k2,color='red',linestyle='dashed')
-    ax[1,1].scatter(k2_arr,wpsi_arr,s=0.2,marker='.',color='black',facecolors='black')
-    ax[1,0].set_xlim(0,1)
-    ax[1,1].set_xlim(0,1)
-    ax[1,0].set_xlabel(r'$k^2$')
-    ax[1,1].set_xlabel(r'$k^2$')
-    ax[1,0].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='black')
-    ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='black')
+    if nae==False:
+        ax[1,0].scatter(k2_arr,walp_arr,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].plot(AE_obj.k2,0.0*AE_obj.k2,color='red',linestyle='dashed')
+        ax[1,1].scatter(k2_arr,wpsi_arr,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].set_xlim(0,1)
+        ax[1,1].set_xlim(0,1)
+        ax[1,0].set_xlabel(r'$k^2$')
+        ax[1,1].set_xlabel(r'$k^2$')
+        ax[1,0].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='black')
+        ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='black')
 
 
     # now do plot as a function of bounce-angle
@@ -1173,6 +1174,19 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         ax[1,0].plot(AE_obj.k2, wa0, color = 'orange', linestyle='dotted', label='NAE (1st order)')
         ax[1,0].plot(AE_obj.k2, wa0+wa1, color = 'green', linestyle='dashed', label='NAE (2nd order)')
         ax[1,0].legend()
+
+        roots_ordered_chi = stel.iotaN*np.asarray(roots_ordered) - alpha
+        khat = np.sin(np.mod(roots_ordered_chi/2.0,2*np.pi))
+    
+        # plot as function of khat^2
+        ax[1,0].scatter(khat**2,walpha_bounceplot,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,1].scatter(khat**2,wpsi_bounceplot,s=0.2,marker='.',color='black',facecolors='black')
+        ax[1,0].set_xlabel(r'$\hat{k}^2$')
+        ax[1,1].set_xlabel(r'$\hat{k}^2$')
+        ax[1,0].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='black')
+        ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='black')
+        ax[1,0].set_xlim(0,1)
+        ax[1,1].set_xlim(0,1)
     if save==True:
         plt.savefig(filename,dpi=1000)
     plt.show()
