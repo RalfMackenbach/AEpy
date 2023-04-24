@@ -27,10 +27,11 @@ name_array = ["precise QA", "precise QH", "precise QA+well", "precise QH+well", 
        "2022 QH nfp7"]
 cmap = cm.get_cmap('RdYlBu')
 
-wstar = 1e1
+wstar = 1.0
 N_r = 10
 r_array = np.logspace(-3,-1,N_r)
 ae_array = np.zeros(N_r)
+ae_nae = np.zeros(N_r)
 for ind_name, name in enumerate(name_array):
     print(name)
     stel = Qsc.from_paper(name, nphi = nphi)
@@ -39,10 +40,10 @@ for ind_name, name in enumerate(name_array):
         print(ind, ' out of ', N_r, ' (',100*(ind+1)/N_r,'%)        ', end="\r")
         stel.r = r
         NAE_AE = ae.AE_pyQSC(stel_obj = stel, alpha=-0.0, N_turns=3, nphi=nphi,
-                    lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None')
+                    lam_res=10001, get_drifts=True,normalize='ft-vol',AE_lengthscale='None')
         NAE_AE.calc_AE(omn=stel.spsi*stel.r*wstar,omt=stel.spsi*stel.r*0.0,omnigenous=True)
         ae_array[ind] = NAE_AE.ae_tot
-    ae_nae = r_array**(7/2)/3.0*np.sqrt(2*np.pi/np.abs(stel.etabar))*0.666834*wstar**3/(np.sqrt(np.pi)*np.pi*stel.B0)
+        ae_nae[ind] = NAE_AE.nae_ae_asymp_weak(stel.r*wstar,1.0)
     print('\n')
     plt.scatter(ae_nae, ae_array, s=40, label = name, alpha = 0.5, c=cmap(ind_name*(0.0*ae_nae+1.0)/len(name_array)),edgecolors='black')
 axes = plt.gca()
