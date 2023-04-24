@@ -441,7 +441,7 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
 
 
 def nae_geo(stel, r, phi, alpha):
-
+    # phi input is in cylindrical coordinates
     # B x grad(B) . grad(psi)
     # alpha = 0
 
@@ -482,7 +482,7 @@ def nae_geo(stel, r, phi, alpha):
 
     B1 = B1c * np.cos(chi) + B1s * np.sin(chi)
     B2 = vals["B20"] + stel.B2c * np.cos(2*chi) + stel.B2s * np.sin(2*chi)
-    dB1_dvarphi = (stel.iota-stel.iotaN) * B1c * np.sin(chi) - (stel.iota-stel.iotaN) * B1s * np.cos(chi)
+    dB1_dvarphi = 0 # (stel.iota-stel.iotaN) * B1c * np.sin(chi) - (stel.iota-stel.iotaN) * B1s * np.cos(chi)
     dB1_dtheta = -B1c * np.sin(chi) + B1s * np.cos(chi)
     dB2_dvarphi = vals["dB20_dvarphi"] + 2*(stel.iota-stel.iotaN)*stel.B2c * np.sin(2*chi) - 2*(stel.iota-stel.iotaN)*stel.B2s * np.cos(2*chi)
     dB2_dtheta = -2*stel.B2c * np.sin(2*chi) + 2*stel.B2s * np.cos(2*chi)
@@ -716,8 +716,8 @@ class AE_pyQSC:
 
 
         # make phi array along which we follow field lines
-        phi0        = stel.varphi
-        phi_start   = (-N_turns*np.pi- alpha)/stel.iotaN
+        # phi0        = stel.varphi
+        phi_start   = (-N_turns*np.pi - alpha)/stel.iotaN
         phi_end     = (+N_turns*np.pi - alpha)/stel.iotaN
         phi         = np.linspace(phi_start, phi_end, nphi)
 
@@ -733,16 +733,18 @@ class AE_pyQSC:
             print('Using r in the near-axis object given.')
         varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky, B2 = nae_geo(stel, r, phi, alpha)
 
-        # Transform to Boozer coordinates
+        # Transform to Boozer coordinates (and now use phi as phi_boozer)
         from scipy.interpolate import splev, splrep
 
         BxdBdotdalpha_spline = splrep(varphi, BxdBdotdalpha)
         BxdBdotdpsi_spline = splrep(varphi, BxdBdotdpsi)
         B_spline = splrep(varphi, B)
+        B2_spline = splrep(varphi, B2)
 
         BxdBdotdalpha = splev(phi, BxdBdotdalpha_spline)
         BxdBdotdpsi = splev(phi, BxdBdotdpsi_spline)
         B = splev(phi, B_spline)
+        B2 = splev(phi, B2_spline)
 
         # assign to self, same units as GIST uses
         dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
