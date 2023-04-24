@@ -706,6 +706,8 @@ class AE_pyQSC:
         else:
             stel = stel_obj
 
+        self.stel = stel_obj
+
         self.normalize = normalize
 
         # set lengthscales
@@ -810,6 +812,22 @@ class AE_pyQSC:
         self.ae_tot     = ae_tot
 
 
+    def nae_ae_asymp_weak(self,omn,a_minor):
+        stel    = self.stel
+        ae_fac  = 0.666834
+        varrho  = stel.r/a_minor
+        aspect  = 1/np.abs(stel.etabar*a_minor)
+        prefac  = np.sqrt(2) / (3 * np.pi)
+        return prefac * np.sqrt(varrho * aspect) * (omn)**3 * ae_fac
+    
+
+    def nae_ae_asymp_strong(self,omn,a_minor):
+        stel    = self.stel
+        varrho  = stel.r/a_minor
+        aspect  = 1/np.abs(stel.etabar*a_minor)
+        prefac  = 1/(np.sqrt(2) * np.pi) * 1.1605
+        return prefac * np.sqrt(varrho * aspect) * (omn) /(aspect)**2
+
 
     def plot_geom(self):
         plot_geom_nae(self)
@@ -847,6 +865,8 @@ class AE_vmec:
         self.Delta_r = 1.0
         self.Delta_y = 1.0
         
+        # set ft_vol
+        self.ft_vol = np.trapz(self.dldz/self.modb,self.z)/np.trapz(self.dldz,self.z)
         
         
 
