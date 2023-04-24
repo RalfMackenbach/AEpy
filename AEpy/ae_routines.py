@@ -370,6 +370,15 @@ def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='
 
 
 
+def drift_asymptotic(stel,a_minor,k2):
+    from scipy import  special
+    E_k_K_k =  special.ellipe(k2)/special.ellipk(k2)
+    wa0 = a_minor * -stel.etabar/stel.B0*(2*E_k_K_k-1)
+    wa1 = a_minor * -stel.r*stel.etabar/stel.B0*(2/stel.etabar*stel.B20_mean+stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*k2)*E_k_K_k + (1-2*k2)) +\
+                                                               2/stel.etabar*stel.B2c*(2*E_k_K_k*E_k_K_k - 4*k2*E_k_K_k + (2*k2-1)))
+    return wa0, wa1
+
+
 ######################################################
 ######################################################
 ######################################################
@@ -687,8 +696,8 @@ class AE_gist:
         plot_precession_func(self,save=save,filename=filename)
 
 
-    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps'):
-        plot_AE_per_lam_func(self,save=save,filename=filename)
+    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps',scale=1.0):
+        plot_AE_per_lam_func(self,save=save,filename=filename,scale=scale)
 
 
 class AE_pyQSC:
@@ -835,13 +844,13 @@ class AE_pyQSC:
         plot_geom_nae(self)
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps', nae = True):
-        plot_precession_func(self,save=save,filename=filename,nae=True)
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None):
+        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel)
 
 
 
-    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps'):
-        plot_AE_per_lam_func(self,save=save,filename=filename)
+    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps',scale=1.0):
+        plot_AE_per_lam_func(self,save=save,filename=filename,scale=scale)
 
 
 class AE_vmec:
@@ -856,6 +865,7 @@ class AE_vmec:
         self.dldz = dldz
         self.normalize = 'ft_vol'
         self.Lref      = Lref
+        self.a_minor   = Lref
         # assign to self
         self.roots  = roots_list
         self.wpsi   = wpsi_list
@@ -910,13 +920,13 @@ class AE_vmec:
         self.ae_tot     = ae_tot
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps'):
-        plot_precession_func(self,save=save,filename=filename)
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None):
+        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel)
 
 
 
-    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps'):
-        plot_AE_per_lam_func(self,save=save,filename=filename)
+    def plot_AE_per_lam(self,save=False,filename='AE_per_lam.eps',scale=1.0):
+        plot_AE_per_lam_func(self,save=save,filename=filename,scale=scale)
 
 
 ######################################################
@@ -1090,7 +1100,7 @@ def plot_surface_and_fl(vmec,fl,s_val,transparant=False,trans_val=0.9,title=''):
 
 
 
-def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False):
+def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None):
     r"""
     Plots the precession as a function of the bounce-points and k2.
     """
@@ -1159,17 +1169,9 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
     ax001.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='tab:blue')
     ax011.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='tab:blue')
     if nae:
-        from scipy import  special
-        E_k_K_k =  special.ellipe(AE_obj.k2)/special.ellipk(AE_obj.k2)
-        wa = AE_obj.a_minor * -AE_obj.stel.etabar/AE_obj.stel.B0*(2*E_k_K_k-1) # Negative sign because derivation for -etabar, no r because y
-        ax[1,0].plot(AE_obj.k2, wa, color = 'orange', linestyle='dotted', label='NAE (1st order)')
-        # wa += AE_obj.stel.r*(AE_obj.stel.B2c/AE_obj.stel.B0/AE_obj.stel.B0 * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * ((1-16*AE_obj.k2+16*AE_obj.k2*AE_obj.k2)*E_k_K_k*E_k_K_k - \
-        #         2*(1-9*AE_obj.k2+8*AE_obj.k2*AE_obj.k2)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) + \
-        #         AE_obj.stel.B20_mean/AE_obj.stel.B0/AE_obj.stel.B0  * 0.5 /AE_obj.k2 / (1-AE_obj.k2) * (E_k_K_k*E_k_K_k + 2*(AE_obj.k2-1)*E_k_K_k + (1-5*AE_obj.k2+4*AE_obj.k2*AE_obj.k2)) +\
-        #         AE_obj.stel.etabar*AE_obj.stel.etabar/AE_obj.stel.B0 * (-4*E_k_K_k*E_k_K_k + 2*(3-2*AE_obj.k2)*E_k_K_k + (2*AE_obj.k2-1)))
-        wa += -AE_obj.stel.r*AE_obj.stel.etabar/AE_obj.stel.B0*(2/AE_obj.stel.etabar*AE_obj.stel.B20_mean+AE_obj.stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*AE_obj.k2)*E_k_K_k + (1-2*AE_obj.k2)) +\
-                                                               2/AE_obj.stel.etabar*AE_obj.stel.B2c*(2*E_k_K_k*E_k_K_k - 4*AE_obj.k2*E_k_K_k + (2*AE_obj.k2-1)))
-        ax[1,0].plot(AE_obj.k2, wa, color = 'green', linestyle='dashed', label='NAE (2nd order)')
+        wa0, wa1 = drift_asymptotic(stel,AE_obj.a_minor,AE_obj.k2)
+        ax[1,0].plot(AE_obj.k2, wa0, color = 'orange', linestyle='dotted', label='NAE (1st order)')
+        ax[1,0].plot(AE_obj.k2, wa0+wa1, color = 'green', linestyle='dashed', label='NAE (2nd order)')
         ax[1,0].legend()
     if save==True:
         plt.savefig(filename,dpi=1000)
@@ -1177,7 +1179,7 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
 
 
 
-def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps'):
+def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     r"""
     Plots AE per bouncewell
     """
@@ -1191,9 +1193,15 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps'):
             'weight': 'normal',
             'size': 10}
 
+    # define AE for normalisation
+    if AE_obj.normalize=='ft-vol':
+        ft_vol = AE_obj.ft_vol
+        AE_norm = AE_obj.ae_tot*ft_vol
+    else:
+        AE_norm = AE_obj.ae_tot
+
     mpl.rc('font', **font)
-    c = 0.5
-    fig ,ax = plt.subplots(1, 1, figsize=(6, 3)) # ,layout='constrained')
+    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*4.0))
     ax.set_xlim(min(AE_obj.z)/np.pi,max(AE_obj.z)/np.pi)
 
     lam_arr   = np.asarray(AE_obj.lam).flatten()
@@ -1252,11 +1260,12 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps'):
     ax.set_ylabel(r'$B$')
     ax2.set_ylabel(r'$\omega_\alpha, \quad \omega_\psi$')
     ax2.tick_params(axis='y', colors='black',direction='in')
-    ax.set_xlabel(r'$z/\pi$')
+    ax.set_xlabel(r'$\varphi/\pi$')
     ax.tick_params(axis='both',direction='in')
     ax2.legend(loc='lower right')
-    cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_ae_per_lam, clip=False), cmap=cm.plasma), ticks=[0, max_ae_per_lam], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda$') #'%.3f'
-    cbar.ax.set_xticklabels([0, round(max_ae_per_lam, 1)])
+    max_norm = max_ae_per_lam/AE_norm
+    cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_norm, clip=False), cmap=cm.plasma), ticks=[0, max_norm], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda/\widehat{A}$') #'%.3f'
+    cbar.ax.set_xticklabels([0, round(max_norm, 0)])
     if save==True:
         plt.savefig(filename, format='png',
             #This is recommendation for publication plots
