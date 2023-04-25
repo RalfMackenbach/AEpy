@@ -879,6 +879,9 @@ class AE_vmec:
         
         # set ft_vol
         self.ft_vol = np.trapz(self.dldz/self.modb,self.z)/np.trapz(self.dldz,self.z)
+
+        # set vmec variable
+        self.vmec   = True
         
         
 
@@ -920,8 +923,8 @@ class AE_vmec:
         self.ae_tot     = ae_tot
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0):
-        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel,alpha=alpha)
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0,q=1.0):
+        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel,alpha=alpha,q=q)
 
 
 
@@ -1100,7 +1103,7 @@ def plot_surface_and_fl(vmec,fl,s_val,transparant=False,trans_val=0.9,title=''):
 
 
 
-def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0):
+def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0,q=1.0):
     r"""
     Plots the precession as a function of the bounce-points and k2.
     """
@@ -1174,8 +1177,8 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         ax[1,0].plot(AE_obj.k2, wa0, color = 'orange', linestyle='dotted', label='NAE (1st order)')
         ax[1,0].plot(AE_obj.k2, wa0+wa1, color = 'green', linestyle='dashed', label='NAE (2nd order)')
         ax[1,0].legend()
-
-        roots_ordered_chi = stel.iotaN*np.asarray(roots_ordered) - alpha
+        roots_ordered     = np.asarray(roots_ordered)*q
+        roots_ordered_chi = stel.iotaN*roots_ordered - alpha
         khat = np.sin(np.mod(roots_ordered_chi/2.0,2*np.pi))
     
         # plot as function of khat^2
@@ -1187,6 +1190,7 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='black')
         ax[1,0].set_xlim(0,1)
         ax[1,1].set_xlim(0,1)
+    
     if save==True:
         plt.savefig(filename,dpi=1000)
     plt.show()
@@ -1197,9 +1201,9 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     r"""
     Plots AE per bouncewell
     """
-    import matplotlib.pyplot as plt
-    import matplotlib        as mpl
-    from    matplotlib   import cm
+    import  matplotlib.pyplot   as      plt
+    import  matplotlib          as      mpl
+    from    matplotlib          import  cm
     import  matplotlib.colors   as      mplc
     plt.close('all')
 
