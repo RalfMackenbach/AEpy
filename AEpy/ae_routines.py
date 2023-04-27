@@ -424,7 +424,7 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
     grad_d_alpha    = (fieldline.B_cross_grad_B_dot_grad_alpha).flatten()
     curv_d_psi      = (fieldline.B_cross_kappa_dot_grad_psi).flatten()
     curv_d_alpha    = (fieldline.B_cross_kappa_dot_grad_alpha).flatten()
-    jac             = (fieldline.B_sup_theta_pest).flatten()
+    jac             = (fieldline.B_sup_theta_pest).flatten() # This is actually the inverse of the Jacobian
     Bhat            = modB/Bref
     
     dpsidr          = Bref * Lref * np.sqrt(s_val)
@@ -438,6 +438,43 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
 
     return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
 
+def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=False):
+    import numpy as np
+    from simsopt.mhd.boozer import Boozer
+    from AEpy.mag_reader import boozxform_fieldlines
+
+    theta_arr = np.linspace(-n_turns*np.pi,n_turns*np.pi,gridpoints)
+    # If Boozer object not provided, then run boozxform for given input Vmec
+    if not bs:
+        bs = Boozer(vmec)
+        bs.register(vmec.s_full_grid)
+        bs.run()
+
+
+    fieldline = boozxform_fieldlines(vmec,bs,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
+
+    if plot==True:
+        plot_surface_and_fl(vmec,fieldline,s_val,transparant=False,trans_val=0.9,title='')
+
+    modB            = (fieldline.modB).flatten()
+    Bref            = (fieldline.B_reference)
+    Lref            = (fieldline.L_reference)
+    grad_d_psi      = (fieldline.B_cross_grad_B_dot_grad_psi).flatten()
+    grad_d_alpha    = (fieldline.B_cross_grad_B_dot_grad_alpha).flatten()
+    curv_d_psi      = (fieldline.B_cross_kappa_dot_grad_psi).flatten()
+    curv_d_alpha    = (fieldline.B_cross_kappa_dot_grad_alpha).flatten()
+    dldtheta        = (fieldline.sqrt_g_b).flatten()*modB/fieldline.iota
+    Bhat            = modB/Bref
+    
+    dpsidr          = Bref * Lref * np.sqrt(s_val)
+    dalphady        = 1/(Lref*np.sqrt(s_val))
+
+    L1              = Lref * grad_d_psi/modB**2/dpsidr
+    K1              = Lref * curv_d_psi/modB/dpsidr
+    L2              = Lref * grad_d_alpha/modB**2/dalphady
+    K2              = Lref * curv_d_alpha/modB/dalphady
+
+    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
 
 
 def nae_geo(stel, r, phi, alpha):
@@ -845,11 +882,18 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3,plot=False):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3,plot=False):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
+        from simsopt.mhd.boozer     import  Boozer
 
-        L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha,phi_center,gridpoints,n_turns,plot)
+        if booz:
+            if isinstance(booz, Boozer):
+                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,n_turns=n_turns,plot=plot)
+            else:
+                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,n_turns=n_turns,plot=plot)
+        else:
+            L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha,phi_center,gridpoints,n_turns,plot)
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic')
         self.z      = theta 
         self.modb   = modb
