@@ -1,5 +1,5 @@
 from scipy.special import erf
-from scipy.integrate import quad, quad_vec
+from scipy.integrate import quad, quad_vec, simpson
 from scipy.interpolate import interp1d
 from BAD import bounce_int
 import numpy as np
@@ -115,7 +115,6 @@ def all_drifts(f,h,h1,h2,x,is_func=False,sinhtanh=False):
         I1 = bounce_int._bounce_integral(f,h1,x,index,root,is_func=True,sinhtanh=sinhtanh)
         I2 = bounce_int._bounce_integral(f,h2,x,index,root,is_func=True,sinhtanh=sinhtanh)
     return [I0,I1,I2], root
-
 
 
 
@@ -287,6 +286,7 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 
 
+
 def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic'):
     r"""
     Calculate the drift given vmec input arrays.
@@ -370,6 +370,7 @@ def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='
 
 
 
+
 def drift_asymptotic(stel,a_minor,k2):
     from scipy import  special
     E_k_K_k =  special.ellipe(k2)/special.ellipk(k2)
@@ -446,6 +447,7 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
     dldtheta        = modB/jac
 
     return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
+
 
 def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=False):
     import numpy as np
@@ -624,7 +626,7 @@ class AE_gist:
         except:
             print('s0 is unavailable - defaulting to 0.5.')
             self.s0 = 0.5
-        self.ft_vol = np.trapz(self.sqrtg,self.z)/np.trapz(self.sqrtg*self.modb,self.z)
+        self.ft_vol = simpson(self.sqrtg,self.z)/simpson(self.sqrtg*self.modb,self.z)
         self.normalize = normalize
 
         self.Delta_x = 1.0
@@ -659,7 +661,7 @@ class AE_gist:
         # loop over all lambda
         Delta_x = self.Delta_x
         Delta_y = self.Delta_y
-        L_tot  = np.trapz(self.sqrtg*self.modb,self.z)
+        L_tot  = simpson(self.sqrtg*self.modb,self.z)
         ae_at_lam_list = []
         if omnigenous==False:
             for lam_idx, lam_val in enumerate(self.lam):
@@ -687,7 +689,7 @@ class AE_gist:
         ae_per_lam_summed = np.zeros_like(lam_arr)
         for lam_idx, lam_val in enumerate(lam_arr):
             ae_per_lam_summed[lam_idx] = np.sum(self.ae_per_lam[lam_idx])
-        ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
+        ae_tot = simpson(ae_per_lam_summed,lam_arr)
         if self.normalize=='ft-vol':
             ae_tot = ae_tot/self.ft_vol
         self.ae_tot     = ae_tot
@@ -695,7 +697,7 @@ class AE_gist:
 
     def calc_AE_fast(self,omn,omt,omnigenous):
         # loop over all lambda
-        L_tot  = np.trapz(self.sqrtg*self.modb,self.z)
+        L_tot  = simpson(self.sqrtg*self.modb,self.z)
         Delta_x = self.Delta_x
         Delta_y = self.Delta_y
         ae_at_lam_list = []
@@ -723,7 +725,7 @@ class AE_gist:
         ae_per_lam_summed = np.zeros_like(lam_arr)
         for lam_idx, lam_val in enumerate(lam_arr):
             ae_per_lam_summed[lam_idx] = np.sum(ae_at_lam_list[lam_idx])
-        ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
+        ae_tot = simpson(ae_per_lam_summed,lam_arr)
         if self.normalize=='ft-vol':
             ae_tot = ae_tot/self.ft_vol
         self.ae_tot     = ae_tot
@@ -806,7 +808,7 @@ class AE_pyQSC:
         
 
         # calculate normalized flux-tube volume
-        self.ft_vol = np.trapz(self.dldphi/B,self.phi)/np.trapz(self.dldphi,self.phi)
+        self.ft_vol = simpson(self.dldphi/B,self.phi)/simpson(self.dldphi,self.phi)
 
         self.my_dpdx = 0.0 #stel.r**2 * stel.p2
 
@@ -826,7 +828,7 @@ class AE_pyQSC:
         # loop over all lambda
         Delta_r = self.Delta_r
         Delta_y = self.Delta_y
-        L_tot  = np.trapz(self.dldphi,self.phi)
+        L_tot  = simpson(self.dldphi,self.phi)
         ae_at_lam_list = []
         if omnigenous==False:
             for lam_idx, lam_val in enumerate(self.lam):
@@ -854,7 +856,7 @@ class AE_pyQSC:
         ae_per_lam_summed = np.zeros_like(lam_arr)
         for lam_idx, lam_val in enumerate(lam_arr):
             ae_per_lam_summed[lam_idx] = np.sum(self.ae_per_lam[lam_idx])
-        ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
+        ae_tot = simpson(ae_per_lam_summed,lam_arr)
         if self.normalize=='ft-vol':
             ae_tot = ae_tot/self.ft_vol
         self.ae_tot     = ae_tot
@@ -922,7 +924,7 @@ class AE_vmec:
         self.Delta_y = 1.0
         
         # set ft_vol
-        self.ft_vol = np.trapz(self.dldz/self.modb,self.z)/np.trapz(self.dldz,self.z)
+        self.ft_vol = simpson(self.dldz/self.modb,self.z)/simpson(self.dldz,self.z)
 
         # set vmec variable
         self.vmec   = True
@@ -933,7 +935,7 @@ class AE_vmec:
         # loop over all lambda
         Delta_r = self.Delta_r
         Delta_y = self.Delta_y
-        L_tot  = np.trapz(self.dldz,self.z)
+        L_tot  = simpson(self.dldz,self.z)
         ae_at_lam_list = []
         if omnigenous==False:
             for lam_idx, lam_val in enumerate(self.lam):
@@ -961,7 +963,7 @@ class AE_vmec:
         ae_per_lam_summed = np.zeros_like(lam_arr)
         for lam_idx, lam_val in enumerate(lam_arr):
             ae_per_lam_summed[lam_idx] = np.sum(self.ae_per_lam[lam_idx])
-        ae_tot = np.trapz(ae_per_lam_summed,lam_arr)
+        ae_tot = simpson(ae_per_lam_summed,lam_arr)
         if self.normalize=='ft-vol':
             ae_tot = ae_tot/self.ft_vol
         self.ae_tot     = ae_tot
@@ -1255,13 +1257,6 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
             'weight': 'normal',
             'size': 10}
 
-    # define AE for normalisation
-    if AE_obj.normalize=='ft-vol':
-        ft_vol = AE_obj.ft_vol
-        AE_norm = AE_obj.ae_tot*ft_vol
-    else:
-        AE_norm = AE_obj.ae_tot
-
     mpl.rc('font', **font)
     fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*4.0))
     ax.set_xlim(min(AE_obj.z)/np.pi,max(AE_obj.z)/np.pi)
@@ -1325,9 +1320,9 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     ax.set_xlabel(r'$\varphi/\pi$')
     ax.tick_params(axis='both',direction='in')
     ax2.legend(loc='lower right')
-    max_norm = max_ae_per_lam/AE_norm
-    cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_norm, clip=False), cmap=cm.plasma), ticks=[0, max_norm], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda/\widehat{A}$') #'%.3f'
-    cbar.ax.set_xticklabels([0, round(max_norm, 0)])
+    max_norm = 1.0
+    cbar = plt.colorbar(cm.ScalarMappable(norm=mplc.Normalize(vmin=0.0, vmax=max_norm, clip=False), cmap=cm.plasma), ticks=[0, max_norm], ax=ax,location='bottom',label=r'$\widehat{A}_\lambda/\widehat{A}_{\lambda,\mathrm{max}}$') #'%.3f'
+    cbar.ax.set_xticklabels([0, round(max_norm)])
     if save==True:
         plt.savefig(filename, format='png',
             #This is recommendation for publication plots
