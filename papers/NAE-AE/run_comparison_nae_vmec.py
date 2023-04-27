@@ -10,19 +10,12 @@ from    matplotlib                  import  rc
 
 
 
-def nae_ae_asymp(stel,omn,a_minor):
-    ae_fac  = 0.666834
-    r       = stel.r
-    eta     = np.abs(stel.etabar)
-    prefac  = np.sqrt(2) / (3 * np.pi)
-    return prefac * np.sqrt(r/ a_minor**2 / eta) * (omn)**3 * ae_fac
-
 # set up matplotlib
 rc('font',**{'family':'serif','serif':['Computer Modern Serif'], 'size': 12})
 rc('text', usetex=True)
 
 # do we plot during iteration?
-plot = True
+plot = False
 
 # force omnigenous
 omnigenous = True
@@ -53,8 +46,8 @@ asym_ae_strong  = np.empty_like(rho_arr)*np.nan
 
 
 # make stellarator in VMEC
-# file = "./configs/wout_precise_QA.nc"
-file = 'wout_precise_QA.nc'
+file = "./configs/wout_precise_QA.nc"
+# file = 'wout_precise_QA.nc'
 mpi = MpiPartition()
 mpi.write()
 vmec = Vmec(file,mpi=mpi,verbose=True)
@@ -107,7 +100,7 @@ for idx, rho in enumerate(rho_arr):
         if plot:
             # VMEC_AE.plot_AE_per_lam()
             VMEC_AE.plot_precession(nae=True,stel=stel)
-        BOOZ_AE = ae.AE_vmec(vmec,rho**2,bs=bs,n_turns=1,lam_res=lam_res)
+        BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res)
         BOOZ_AE.calc_AE(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
         ae_num_booz[idx] = BOOZ_AE.ae_tot
         if plot:
