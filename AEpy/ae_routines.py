@@ -1,5 +1,5 @@
 from scipy.special import erf
-from scipy.integrate import quad, quad_vec, simpson
+from scipy.integrate import quad, quad_vec, simpson, nquad
 from scipy.interpolate import interp1d
 from BAD import bounce_int
 import numpy as np
@@ -286,6 +286,81 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 
 
+def drift_from_pyQSC_direct(theta,modb,dldz,L1,L2,my_dpdx,lam_val,quad=False,interp_kind='cubic'):
+    r"""
+    Calculate the drift given pyQSC input arrays.
+
+    """
+    
+    # routine if quad is true:
+    # make interpolated functions
+    if quad==True:
+        L1_f    = interp1d(theta,L1,kind=interp_kind)
+        L2_f    = interp1d(theta,L2,kind=interp_kind)
+        dldz_f  = interp1d(theta,dldz,kind=interp_kind)
+        modb_f  = interp1d(theta,modb,kind=interp_kind)
+        # we're going to make a much finer resolved
+        # theta_arr to evaluate the function on
+        theta   = np.linspace(theta.min(),theta.max(),1000)
+
+        # loop over lambda
+        # and save results in list of lists
+        wpsi_list   = []
+        walpha_list = []
+        tau_b_list  = []
+        roots_list  = []
+        lam_list    = []
+        # start the loop
+        # construct interpolated drift for lambda vals
+        f  = lambda x: 1.0 - lam_val * modb_f(x)
+        h  = lambda x: dldz_f(x)
+        hx = lambda x: ( lam_val + 2 * (1/modb_f(x) - lam_val) ) * L1_f(x) * dldz_f(x)
+        hy = lambda x: ( ( lam_val + 2 * (1/modb_f(x) - lam_val) ) * L2_f(x) - my_dpdx * (1 - lam_val * modb_f(x))/modb_f(x)**2 ) * dldz_f(x)
+        list, roots = all_drifts(f,h,hx,hy,theta,is_func=True,sinhtanh=False)
+        roots       = np.asarray(roots)
+        tau_b       = np.asarray(list[0])
+        delta_psi   = np.asarray(list[1])
+        delta_alpha = np.asarray(list[2])
+        walpha      = delta_alpha/tau_b
+        wpsi        = delta_psi/tau_b
+        wpsi_list.append(wpsi)
+        walpha_list.append(walpha)
+        tau_b_list.append(tau_b)
+        roots_list.append(roots)
+        lam_list.append([lam_val])
+
+    # routine if quad is False:
+    if quad==False:
+        # loop over lambda
+        # and save results in list of lists
+        wpsi_list   = []
+        walpha_list = []
+        tau_b_list  = []
+        roots_list  = []
+        lam_list    = []
+        # start the loop
+        # construct interpolated drift for lambda vals
+        f  = 1 - lam_val * modb
+        h  = dldz
+        hx =( lam_val + 2 * (1/modb - lam_val) ) * L1 * dldz
+        hy =( ( lam_val + 2 * (1/modb - lam_val) ) * L2 - my_dpdx * (1 - lam_val * modb)/modb**2 ) * dldz
+        list, roots = all_drifts(f,h,hx,hy,theta,is_func=False,sinhtanh=False)
+        roots       = np.asarray(roots)
+        tau_b       = np.asarray(list[0])
+        delta_psi   = np.asarray(list[1])
+        delta_alpha = np.asarray(list[2])
+        walpha      = delta_alpha/tau_b
+        wpsi        = delta_psi/tau_b
+        wpsi_list.append(wpsi)
+        walpha_list.append(walpha)
+        tau_b_list.append(tau_b)
+        roots_list.append(roots)
+        lam_list.append([lam_val])
+
+    return roots_list,wpsi_list,walpha_list,tau_b_list,lam_list
+
+
+
 
 def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic'):
     r"""
@@ -499,7 +574,7 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
 
 
-def nae_geo(stel, r, phi, alpha):
+def nae_geo(stel, r, phi, alpha,make_periodic=False):
     # phi input is in cylindrical coordinates
     # B x grad(B) . grad(psi)
     # alpha = 0
@@ -586,6 +661,9 @@ def nae_geo(stel, r, phi, alpha):
 
     # Jacobian
     jac_cheeky = (stel.G0+r*r*stel.G2+stel.iota*stel.I2)/B/B
+
+    if make_periodic==True:
+        B[-1] = B[0]
 
     return varphi, BxdBdotdalpha, BxdBdotdpsi, BdotdB, B, jac_cheeky, B2
 
@@ -873,6 +951,29 @@ class AE_pyQSC:
         self.ae_tot     = ae_tot
 
 
+    def calc_AE_quad(self,omn,omt,omnigenous):
+        Delta_r = self.Delta_r
+        Delta_y = self.Delta_y
+        L_tot  = simpson(self.dldphi,self.phi)
+        if omnigenous==True:
+            # construct integrand
+            def integrand(lam):
+                dlnndx          = -omn
+                dlnTdx          = -omt
+                roots_list,wpsi_list,walpha_list,tau_b_list,lam_list = drift_from_pyQSC_direct(self.phi,self.modb,self.dldphi,self.L1,self.L2,self.my_dpdx,lam,quad=False,interp_kind='cubic')
+                walpha_arr = np.asarray(walpha_list).flatten()
+                taub_arr = np.asarray(tau_b_list).flatten()
+                c0 = Delta_r * (dlnndx - 3/2 * dlnTdx) / walpha_arr
+                c1 = 1.0 - Delta_r * dlnTdx / walpha_arr
+                ans = np.sum(AE_per_lam(c0,c1,taub_arr,walpha_arr))
+                return ans
+            # do integral
+            ae_tot, ae_err =  quad(integrand,(1/self.modb).min(),(1/self.modb).max(),epsrel=1e-6,epsabs=0,limit=10000)
+            if self.normalize=='ft-vol':
+                ae_tot = ae_tot/self.ft_vol
+            self.ae_tot = ae_tot/L_tot
+
+
     def nae_ae_asymp_weak(self,omn,a_minor=1.0):
         stel    = self.stel
         ae_fac  = 0.666834
@@ -958,7 +1059,7 @@ class AE_vmec:
                 walpha_at_lam   = Delta_r*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
                 integrand       = lambda x: AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x)
-                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=1e-6,epsabs=1e-20, limit=1000)
+                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=1e-6,epsabs=1e-20, limit=10000)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
         if omnigenous==True:
             for lam_idx, lam_val in enumerate(self.lam):
