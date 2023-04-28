@@ -479,14 +479,11 @@ def boozxform_fieldlines(vs, bs, s, alpha, theta1d=None, phi1d=None, phi_center=
     if plot:
         import matplotlib.pyplot as plt
         plt.figure(figsize=(13, 7))
-        nrows = 3
-        ncols = 3
+        nrows = 2
+        ncols = 2
         variables = ['modB', 
                     #  'B_cross_grad_B_dot_grad_thphi', 'B_cross_grad_B_dot_grad_psi',
-                     'F_p', 'G_p', 'F_tot', 
-                    #  'rho',
-                    #  'grad_thphi_dot_grad_thphi', 'grad_thphi_dot_grad_psi', 'grad_psi_dot_grad_psi',
-                     'C_p', 'C_psi', 'C_q', 'C_tot', 'crit']
+                     'grad_thphi_dot_grad_alpha', 'grad_thphi_dot_grad_psi', 'grad_psi_dot_grad_psi']
         def name_var(var_name):
             if var_name == "modB":
                 return r"$|\mathbf{B}|$"
@@ -494,30 +491,12 @@ def boozxform_fieldlines(vs, bs, s, alpha, theta1d=None, phi1d=None, phi_center=
                 return r"$\mathbf{B}\times\nabla B\cdot(\nabla\theta-\iota\nabla\varphi)$"
             elif var_name == "B_cross_grad_B_dot_grad_psi":
                 return r"$\mathbf{B}\times\nabla B\cdot\nabla\psi$"
-            elif var_name == "F_p":
-                return r"$\mathcal{F}/|\mu_0 p'|$"
-            elif var_name == "G_p":
-                return r"$\mathcal{G}/|\mu_0 p'|$"
-            elif var_name == "F_tot":
-                return r"$F$"
-            elif var_name == "rho":
-                return r"$\tilde{\rho}$"
             elif var_name == "grad_thphi_dot_grad_thphi":
                 return r"$|\nabla\theta-\iota\nabla\varphi|^2$"
             elif var_name == "grad_thphi_dot_grad_psi":
                 return r"$\nabla \psi\cdot(\nabla\theta-\iota\nabla\varphi)$"
             elif var_name == "grad_psi_dot_grad_psi":
                 return r"$|\nabla \psi|^2$"
-            elif var_name == "C_p":
-                return r"$C_p$"
-            elif var_name == "C_psi":
-                return r"$C_\psi$"
-            elif var_name == "C_q":
-                return r"$C_q$"
-            elif var_name == "C_tot":
-                return r"$C$"
-            elif var_name == "crit":
-                return r"$F/C$"
             
         for j, variable in enumerate(variables):
             ax = plt.subplot(nrows, ncols, j + 1)
