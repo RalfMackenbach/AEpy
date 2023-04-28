@@ -862,7 +862,7 @@ class AE_pyQSC:
         self.ae_tot     = ae_tot
 
 
-    def nae_ae_asymp_weak(self,omn,a_minor):
+    def nae_ae_asymp_weak(self,omn,a_minor=1.0):
         stel    = self.stel
         ae_fac  = 0.666834
         varrho  = stel.r/a_minor
@@ -871,7 +871,7 @@ class AE_pyQSC:
         return prefac * np.sqrt(varrho * aspect) * (omn)**3 * ae_fac
     
 
-    def nae_ae_asymp_strong(self,omn,a_minor):
+    def nae_ae_asymp_strong(self,omn,a_minor=1.0):
         stel    = self.stel
         varrho  = stel.r/a_minor
         aspect  = 1/np.abs(stel.etabar*a_minor)
