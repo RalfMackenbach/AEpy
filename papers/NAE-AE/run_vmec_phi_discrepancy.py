@@ -18,8 +18,8 @@ rc('text', usetex=True)
 plot = True
 omnigenous = True
 lam_res = 10001
-rho = 0.1
-file_vmec = "./configs/wout_precise_QH.nc"
+rho = 0.5
+file_vmec = "./../../../balloon_ITG/wout_precise_QH.nc" # "./configs/wout_precise_QH.nc"
 file_qsc  = 'precise QH'
 
 
@@ -57,8 +57,6 @@ stel.R0 = R_major
 
 
 
-
-
 splines = vmec_splines(vmec)
 iota_s = splines.iota(rho**2)
 
@@ -66,10 +64,12 @@ iota_s = splines.iota(rho**2)
 stel.r = a_minor*rho
 
 stel.calculate()
-NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=nphi,
-            lam_res=lam_res,get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=a_minor)
-if plot:
-    NAE_AE.plot_precession(nae=True,stel=stel,filename='NAE_booz_phi.png',save=True)
+helicity = stel.iota - stel.iotaN
+
+# NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=nphi,
+#             lam_res=lam_res,get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=a_minor)
+# if plot:
+#     NAE_AE.plot_precession(nae=True,stel=stel,filename='NAE_booz_phi.png',save=True)
 
 # next try vmec using vmec fieldlines
 # VMEC_AE = ae.AE_vmec(vmec,rho**2,n_turns=1,lam_res=lam_res)
@@ -83,6 +83,6 @@ print(stel.iota,stel.iotaN)
 print(iota_s,iota_s+4)
 
 # next try vmec using booz fieldlines
-BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=np.abs(stel.iota)/np.abs(stel.iotaN),lam_res=lam_res)
+BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,helicity=helicity,lam_res=lam_res)
 if plot:
     BOOZ_AE.plot_precession(nae=True,stel=stel,filename='vmec_booz_phi.png',save=True)

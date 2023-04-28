@@ -417,12 +417,17 @@ def drift_asymptotic(stel,a_minor,k2):
 ######################################################
 
 
-def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=False):
+def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helicity=0,plot=False):
     import numpy as np
-    from simsopt.mhd.vmec_diagnostics import vmec_fieldlines
+    from simsopt.mhd.vmec_diagnostics import vmec_fieldlines, vmec_splines
 
-    theta_arr = np.linspace(-n_turns*np.pi,n_turns*np.pi,gridpoints)
-    fieldline = vmec_fieldlines(vmec,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
+    vmec_s = vmec_splines(vmec)
+    iota_s = vmec_s.iota(s_val)
+    iotaN_s = iota_s-helicity
+
+    theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+
+    fieldline = vmec_fieldlines(vmec_s,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
 
     if plot==True:
         plot_surface_and_fl(vmec,fieldline,s_val,transparant=False,trans_val=0.9,title='')
@@ -449,12 +454,18 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=
     return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
 
 
-def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=3,plot=False):
+def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1, helicity=0,plot=False):
     import numpy as np
     from simsopt.mhd.boozer import Boozer
     from AEpy.mag_reader import boozxform_fieldlines
+    from simsopt.mhd.vmec_diagnostics import vmec_fieldlines, vmec_splines
 
-    theta_arr = np.linspace(-n_turns*np.pi,n_turns*np.pi,gridpoints)
+    vmec_s = vmec_splines(vmec)
+    iota_s = vmec_s.iota(s_val)
+    iotaN_s = iota_s-helicity
+
+    theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+
     # If Boozer object not provided, then run boozxform for given input Vmec
     if not bs:
         bs = Boozer(vmec)
@@ -893,18 +904,22 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3,plot=False):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
         from simsopt.mhd.boozer     import  Boozer
 
         if booz:
             if isinstance(booz, Boozer):
-                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,n_turns=n_turns,plot=plot)
+                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
+                                                             gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot)
             else:
-                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,n_turns=n_turns,plot=plot)
+                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                                                             n_turns=n_turns,helicity=helicity,plot=plot)
         else:
-            L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha,phi_center,gridpoints,n_turns,plot)
+            L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                                                         n_turns=n_turns,helicity=helicity,plot=plot)
+            
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic')
         self.z      = theta 
         self.modb   = modb
