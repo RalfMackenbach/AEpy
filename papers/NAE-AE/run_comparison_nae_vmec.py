@@ -86,7 +86,7 @@ for idx, rho in enumerate(rho_arr):
     omt_input = omt
     stel.calculate()
     if rho < rho_break:
-        NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=nphi,
+        NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=10*nphi,
                     lam_res=lam_res,get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=a_minor)
         NAE_AE.calc_AE(omn=stel.spsi*omn_input,omt=stel.spsi*omt_input,omnigenous=omnigenous)
         ae_num_qsc[idx] = NAE_AE.ae_tot

@@ -845,6 +845,7 @@ class AE_pyQSC:
 
         self.stel = stel_obj
 
+
         self.normalize = normalize
 
         # set lengthscales
@@ -952,12 +953,17 @@ class AE_pyQSC:
 
 
     def calc_AE_quad(self,omn,omt,omnigenous):
+        # import matplotlib.pyplot as plt
         Delta_r = self.Delta_r
         Delta_y = self.Delta_y
+        self.modb = self.modb
+        bmax = (self.modb).max()
+        bmin = (self.modb).min()
         L_tot  = simpson(self.dldphi,self.phi)
         if omnigenous==True:
             # construct integrand
-            def integrand(lam):
+            def integrand(k2):
+                lam = - (k2 * (bmax - bmin) - bmax) / (bmax*bmin)
                 dlnndx          = -omn
                 dlnTdx          = -omt
                 roots_list,wpsi_list,walpha_list,tau_b_list,lam_list = drift_from_pyQSC_direct(self.phi,self.modb,self.dldphi,self.L1,self.L2,self.my_dpdx,lam,quad=False,interp_kind='cubic')
@@ -966,12 +972,16 @@ class AE_pyQSC:
                 c0 = Delta_r * (dlnndx - 3/2 * dlnTdx) / walpha_arr
                 c1 = 1.0 - Delta_r * dlnTdx / walpha_arr
                 ans = np.sum(AE_per_lam(c0,c1,taub_arr,walpha_arr))
+                # plt.scatter(k2,ans,color='black',marker='o',s=0.1)
+                # print(k2,ans)
                 return ans
             # do integral
-            ae_tot, ae_err =  quad(integrand,(1/self.modb).min(),(1/self.modb).max(),epsrel=1e-6,epsabs=0,limit=10000)
+            ae_arr =  quad(integrand,0.0,1.0,epsrel=1e-4,epsabs=0,limit=int(1e6))
+            
+            # plt.show()
             if self.normalize=='ft-vol':
-                ae_tot = ae_tot/self.ft_vol
-            self.ae_tot = ae_tot/L_tot
+                ae_tot = ae_arr[0]/self.ft_vol
+            self.ae_tot = ae_tot/L_tot * (bmax - bmin)/(bmax * bmin)
 
 
     def nae_ae_asymp_weak(self,omn,a_minor=1.0):
