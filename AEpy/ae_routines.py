@@ -916,7 +916,7 @@ class AE_pyQSC:
                 # plt.scatter(k2,ans,marker='o',s=0.1)
                 return ans
             # do integral
-            ae_arr = quad(integrand,0.0,1.0)#,points=special_k2)
+            ae_arr = quad(integrand,0.0,1.0,epsrel=1e-4,epsabs=1e-16,limit=10000)#,points=special_k2)
         if omnigenous==True:
             # construct integrand
             def integrand(k2):
@@ -933,7 +933,7 @@ class AE_pyQSC:
                 # print(k2,ans)
                 return ans
             # do integral
-            ae_arr =  quad(integrand,0.0,1.0)#,points=special_k2)
+            ae_arr =  quad(integrand,0.0,1.0,epsrel=1e-4,epsabs=1e-16,limit=10000)#,points=special_k2)
             
         # plt.show()
         if self.normalize=='ft-vol':
@@ -1109,8 +1109,8 @@ class AE_vmec:
     
 
 
-    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0,q=1.0):
-        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel,alpha=alpha,q=q)
+    def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0,iota=1.0):
+        plot_precession_func(self,save=save,filename=filename,nae=nae,stel=stel,alpha=alpha,iota=iota)
 
 
 
@@ -1289,7 +1289,7 @@ def plot_surface_and_fl(vmec,fl,s_val,transparant=False,trans_val=0.9,title=''):
 
 
 
-def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0,q=1.0):
+def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0,iota=1.0):
     r"""
     Plots the precession as a function of the bounce-points and k2.
     """
@@ -1363,7 +1363,7 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         ax[1,0].plot(AE_obj.k2, wa0, color = 'orange', linestyle='dotted', label='NAE (1st order)')
         ax[1,0].plot(AE_obj.k2, wa0+wa1, color = 'green', linestyle='dashed', label='NAE (2nd order)')
         ax[1,0].legend()
-        roots_ordered     = np.asarray(roots_ordered)*q
+        roots_ordered     = np.asarray(roots_ordered)/iota
         roots_ordered_chi = stel.iotaN*roots_ordered - alpha
         khat = np.sin(np.mod(roots_ordered_chi/2.0,2*np.pi))
     
