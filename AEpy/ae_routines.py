@@ -1,5 +1,6 @@
 from scipy.special import erf
-from scipy.integrate import quad, quad_vec, simpson, nquad
+from scipy.integrate import quad, quad_vec, simpson, dblquad
+from scipy.signal   import argrelextrema
 from scipy.interpolate import interp1d
 from BAD import bounce_int
 import numpy as np
@@ -204,14 +205,17 @@ def drift_from_gist(theta,modb,sqrtg,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 
 
-def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kind='cubic'):
+def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kind='cubic',direct=False):
     r"""
     Calculate the drift given pyQSC input arrays.
 
     """
-    # make lam arr
-    lam_arr = np.linspace(1/modb.max(),1/modb.min(),lam_res+1,endpoint=False)
-    lam_arr = np.delete(lam_arr,  0)
+    if direct==False:
+        # make lam arr
+        lam_arr = np.linspace(1/modb.max(),1/modb.min(),lam_res+1,endpoint=False)
+        lam_arr = np.delete(lam_arr,  0)
+    if direct==True:
+        lam_arr = np.asarray([lam_res])
 
     # routine if quad is true:
     # make interpolated functions
@@ -286,90 +290,19 @@ def drift_from_pyQSC(theta,modb,dldz,L1,L2,my_dpdx,lam_res,quad=False,interp_kin
 
 
 
-def drift_from_pyQSC_direct(theta,modb,dldz,L1,L2,my_dpdx,lam_val,quad=False,interp_kind='cubic'):
-    r"""
-    Calculate the drift given pyQSC input arrays.
-
-    """
-    
-    # routine if quad is true:
-    # make interpolated functions
-    if quad==True:
-        L1_f    = interp1d(theta,L1,kind=interp_kind)
-        L2_f    = interp1d(theta,L2,kind=interp_kind)
-        dldz_f  = interp1d(theta,dldz,kind=interp_kind)
-        modb_f  = interp1d(theta,modb,kind=interp_kind)
-        # we're going to make a much finer resolved
-        # theta_arr to evaluate the function on
-        theta   = np.linspace(theta.min(),theta.max(),1000)
-
-        # loop over lambda
-        # and save results in list of lists
-        wpsi_list   = []
-        walpha_list = []
-        tau_b_list  = []
-        roots_list  = []
-        lam_list    = []
-        # start the loop
-        # construct interpolated drift for lambda vals
-        f  = lambda x: 1.0 - lam_val * modb_f(x)
-        h  = lambda x: dldz_f(x)
-        hx = lambda x: ( lam_val + 2 * (1/modb_f(x) - lam_val) ) * L1_f(x) * dldz_f(x)
-        hy = lambda x: ( ( lam_val + 2 * (1/modb_f(x) - lam_val) ) * L2_f(x) - my_dpdx * (1 - lam_val * modb_f(x))/modb_f(x)**2 ) * dldz_f(x)
-        list, roots = all_drifts(f,h,hx,hy,theta,is_func=True,sinhtanh=False)
-        roots       = np.asarray(roots)
-        tau_b       = np.asarray(list[0])
-        delta_psi   = np.asarray(list[1])
-        delta_alpha = np.asarray(list[2])
-        walpha      = delta_alpha/tau_b
-        wpsi        = delta_psi/tau_b
-        wpsi_list.append(wpsi)
-        walpha_list.append(walpha)
-        tau_b_list.append(tau_b)
-        roots_list.append(roots)
-        lam_list.append([lam_val])
-
-    # routine if quad is False:
-    if quad==False:
-        # loop over lambda
-        # and save results in list of lists
-        wpsi_list   = []
-        walpha_list = []
-        tau_b_list  = []
-        roots_list  = []
-        lam_list    = []
-        # start the loop
-        # construct interpolated drift for lambda vals
-        f  = 1 - lam_val * modb
-        h  = dldz
-        hx =( lam_val + 2 * (1/modb - lam_val) ) * L1 * dldz
-        hy =( ( lam_val + 2 * (1/modb - lam_val) ) * L2 - my_dpdx * (1 - lam_val * modb)/modb**2 ) * dldz
-        list, roots = all_drifts(f,h,hx,hy,theta,is_func=False,sinhtanh=False)
-        roots       = np.asarray(roots)
-        tau_b       = np.asarray(list[0])
-        delta_psi   = np.asarray(list[1])
-        delta_alpha = np.asarray(list[2])
-        walpha      = delta_alpha/tau_b
-        wpsi        = delta_psi/tau_b
-        wpsi_list.append(wpsi)
-        walpha_list.append(walpha)
-        tau_b_list.append(tau_b)
-        roots_list.append(roots)
-        lam_list.append([lam_val])
-
-    return roots_list,wpsi_list,walpha_list,tau_b_list,lam_list
 
 
-
-
-def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic'):
+def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic',direct=False):
     r"""
     Calculate the drift given vmec input arrays.
 
     """
-    # make lam arr
-    lam_arr = np.linspace(1/modb.max(),1/modb.min(),lam_res+2,endpoint=True)[1:-1]
+    if direct==False:
+        # make lam arr
+        lam_arr = np.linspace(1/modb.max(),1/modb.min(),lam_res+2,endpoint=True)[1:-1]
 
+    if direct==True:
+        lam_arr = np.asarray([lam_res])
     # routine if quad is true:
     # make interpolated functions
     if quad==True:
@@ -442,6 +375,7 @@ def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='
         k2         = (1 - lam_arr*np.amin(modb))*np.amax(modb)/(np.amax(modb)-np.amin(modb))
 
     return roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2
+
 
 
 
@@ -956,18 +890,41 @@ class AE_pyQSC:
         # import matplotlib.pyplot as plt
         Delta_r = self.Delta_r
         Delta_y = self.Delta_y
-        self.modb = self.modb
+        modb = self.modb
         bmax = (self.modb).max()
         bmin = (self.modb).min()
+        # special_modb_max = modb[argrelextrema(modb, np.greater)[0]]
+        # special_modb_min = modb[argrelextrema(modb, np.less)[0]]
+        # special_points  = np.concatenate((special_modb_max,special_modb_min))
+        # special_lam     = 1/special_points
+        # special_k2      = (bmax - special_lam * bmax * bmin) / (bmax - bmin)
+        # special_k2      = np.sort(np.unique(special_k2.round())) # remove duplicates
+        # special_k2      = np.delete(special_k2, 0)
+        # special_k2      = tuple(np.delete(special_k2, -1))
+        # print(special_k2)
         L_tot  = simpson(self.dldphi,self.phi)
+        if omnigenous==False:
+            # construct integrand
+            def integrand(k2):
+                lam = - (k2 * (bmax - bmin) - bmax) / (bmax*bmin)
+                _, wpsi_list, walpha_list,tau_b_list, _, _ = drift_from_pyQSC(self.phi,self.modb,self.dldphi,self.L1,self.L2,self.my_dpdx,lam,direct=True)
+                wpsi_arr        = Delta_y*np.asarray(wpsi_list).flatten()
+                walpha_arr      = Delta_r*np.asarray(walpha_list).flatten()
+                taub_arr        = np.asarray(tau_b_list).flatten()
+                integrand_2     = lambda z: np.sum(AE_per_lam_per_z(walpha_arr,wpsi_arr,Delta_r*w_diamag(-omn,-omt,z),taub_arr,z))
+                ans, _ = quad(integrand_2,0.0,np.inf,epsrel=1e-3)
+                # plt.scatter(k2,ans,marker='o',s=0.1)
+                return ans
+            # do integral
+            ae_arr = quad(integrand,0.0,1.0)#,points=special_k2)
         if omnigenous==True:
             # construct integrand
             def integrand(k2):
                 lam = - (k2 * (bmax - bmin) - bmax) / (bmax*bmin)
                 dlnndx          = -omn
                 dlnTdx          = -omt
-                roots_list,wpsi_list,walpha_list,tau_b_list,lam_list = drift_from_pyQSC_direct(self.phi,self.modb,self.dldphi,self.L1,self.L2,self.my_dpdx,lam,quad=False,interp_kind='cubic')
-                walpha_arr = np.asarray(walpha_list).flatten()
+                _, _, walpha_list,tau_b_list, _, _ = drift_from_pyQSC(self.phi,self.modb,self.dldphi,self.L1,self.L2,self.my_dpdx,lam,direct=True)
+                walpha_arr = Delta_r*np.asarray(walpha_list).flatten()
                 taub_arr = np.asarray(tau_b_list).flatten()
                 c0 = Delta_r * (dlnndx - 3/2 * dlnTdx) / walpha_arr
                 c1 = 1.0 - Delta_r * dlnTdx / walpha_arr
@@ -976,12 +933,12 @@ class AE_pyQSC:
                 # print(k2,ans)
                 return ans
             # do integral
-            ae_arr =  quad(integrand,0.0,1.0,epsrel=1e-4,epsabs=0,limit=int(1e6))
+            ae_arr =  quad(integrand,0.0,1.0)#,points=special_k2)
             
-            # plt.show()
-            if self.normalize=='ft-vol':
-                ae_tot = ae_arr[0]/self.ft_vol
-            self.ae_tot = ae_tot/L_tot * (bmax - bmin)/(bmax * bmin)
+        # plt.show()
+        if self.normalize=='ft-vol':
+            ae_tot = ae_arr[0]/self.ft_vol
+        self.ae_tot = ae_tot/L_tot * (bmax - bmin)/(bmax * bmin)
 
 
     def nae_ae_asymp_weak(self,omn,a_minor=1.0):
@@ -1030,14 +987,16 @@ class AE_vmec:
         else:
             L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                          n_turns=n_turns,helicity=helicity,plot=plot)
-            
-        roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='cubic')
+        
+        # get drifts
+        roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(np.asarray(theta),np.asarray(modb),np.asarray(dldz),np.asarray(L1),np.asarray(L2),np.asarray(K1),np.asarray(K2),lam_res,quad=False,interp_kind='cubic')
+        self.modb  = modb
         self.z      = theta 
-        self.modb   = modb
-        self.dldz = dldz
-        self.normalize = 'ft_vol'
+        self.dldz   = dldz
+        self.normalize = 'ft-vol'
         self.Lref      = Lref
         self.a_minor   = Lref
+        
         # assign to self
         self.roots  = roots_list
         self.wpsi   = wpsi_list
@@ -1048,6 +1007,21 @@ class AE_vmec:
         # set AE length-scale
         self.Delta_r = 1.0
         self.Delta_y = 1.0
+        # set geometry 
+        # plt.plot(theta,dldz)
+        # plt.show()
+        # plt.plot(theta,L1)
+        # plt.show()
+        # plt.plot(theta,L2)
+        # plt.show()
+        # plt.plot(theta,K1)
+        # plt.show()
+        # plt.plot(theta,K2)
+        # plt.show()
+        self.L1 = L1
+        self.L2 = L2
+        self.K1 = K1
+        self.K2 = K2
         
         # set ft_vol
         self.ft_vol = simpson(self.dldz/self.modb,self.z)/simpson(self.dldz,self.z)
@@ -1082,8 +1056,7 @@ class AE_vmec:
                 ae_at_lam       = AE_per_lam(c0,c1,taub_at_lam,walpha_at_lam)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
 
-        self.ae_per_lam     = ae_at_lam_list
-
+        self.ae_per_lam = ae_at_lam_list
         # now do integral over lam to find total AE
         lam_arr   = np.asarray(self.lam).flatten()
         ae_per_lam_summed = np.zeros_like(lam_arr)
@@ -1093,6 +1066,47 @@ class AE_vmec:
         if self.normalize=='ft-vol':
             ae_tot = ae_tot/self.ft_vol
         self.ae_tot     = ae_tot
+
+        
+    def calc_AE_quad(self,omn,omt,omnigenous):
+        # loop over all lambda
+        # import matplotlib.pyplot as plt
+        Delta_r = self.Delta_r
+        Delta_y = self.Delta_y
+        L_tot  = simpson(self.dldz,self.z)
+        bmax = (self.modb).max()
+        bmin = (self.modb).min()
+        if omnigenous==False:
+            def integrand(k2):
+                lam = - (k2 * (bmax - bmin) - bmax) / (bmax*bmin)
+                _,wpsi_list,walpha_list,tau_b_list,_,_ = drift_from_vmec(self.z,self.modb,self.dldz,self.L1,self.L2,self.K1,self.K2,lam,direct=True)
+                wpsi_arr        = Delta_y*np.asarray(wpsi_list).flatten()
+                walpha_arr      = Delta_r*np.asarray(walpha_list).flatten()
+                taub_arr        = np.asarray(tau_b_list).flatten()
+                integrand_2     = lambda z: np.sum(AE_per_lam_per_z(walpha_arr,wpsi_arr,Delta_r*w_diamag(-omn,-omt,z),taub_arr,z))
+                ans, _ = quad(integrand_2,0.0,np.inf,epsrel=1e-3)
+                return ans
+            ae_arr = quad(integrand,0.0,1.0)#,points=special_k2)
+        if omnigenous==True:
+            def integrand(k2):
+                lam = - (k2 * (bmax - bmin) - bmax) / (bmax*bmin)
+                _,wpsi_list,walpha_list,tau_b_list,_,_ = drift_from_vmec(self.z,self.modb,self.dldz,self.L1,self.L2,self.K1,self.K2,lam,direct=True)
+                walpha_arr      = Delta_r*np.asarray(walpha_list).flatten()
+                taub_arr        = np.asarray(tau_b_list).flatten()
+                dlnndx          = -omn
+                dlnTdx          = -omt
+                c0 = Delta_r * (dlnndx - 3/2 * dlnTdx) / walpha_arr
+                c1 = 1.0 - Delta_r * dlnTdx / walpha_arr
+                ans     = np.sum(AE_per_lam(c0,c1,taub_arr,walpha_arr))
+                # plt.scatter(k2,ans,color='black',marker='o',s=0.2)
+                return ans
+            ae_arr = quad(integrand,0.0,1.0)#,points=special_k2)
+        # plt.show()
+        if self.normalize=='ft-vol':
+            ae_tot = ae_arr[0]/self.ft_vol
+        self.ae_tot = ae_tot/L_tot * (bmax - bmin)/(bmax * bmin)
+
+    
 
 
     def plot_precession(self,save=False,filename='AE_precession.eps', nae=False,stel=None,alpha=0.0,q=1.0):

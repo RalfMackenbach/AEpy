@@ -17,8 +17,8 @@ rc('text', usetex=True)
 
 
 # make stellarator in VMEC
-# file = "./configs/wout_precise_QA.nc"
-file = 'wout_precise_QA.nc'
+file = "./configs/wout_precise_QH.nc"
+file_qsc = 'precise QH'
 mpi = MpiPartition()
 mpi.write()
 vmec = Vmec(file,mpi=mpi,verbose=True)
@@ -37,16 +37,16 @@ rho_break = np.sqrt(1/N_s)
 
 # make stellarator in QSC
 nphi = int(1e3+1)
-stel = Qsc.from_paper('precise QA', nphi = nphi)
+stel = Qsc.from_paper(file_qsc, nphi = nphi)
 stel.spsi = -1
 stel.zs = -stel.zs
 stel.B0 = B_ref
 stel.R0 = R_major
 
 
-lam_res = 10001
+lam_res = 1001
 
-rho = 0.5
+rho = 0.1
 omn = 1.0
 omt = 1.0
 omnigenous = True
@@ -56,14 +56,14 @@ stel.r = a_minor*rho
 omn_input = omn
 omt_input = omt
 stel.calculate()
-NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=nphi,
+NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=3.0, nphi=nphi,
                      lam_res=lam_res,get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=a_minor)
 NAE_AE.calc_AE(omn=stel.spsi*omn_input,omt=stel.spsi*omt_input,omnigenous=omnigenous)
 
 NAE_AE.plot_precession(nae=True,stel=stel)
-VMEC_AE = ae.AE_vmec(vmec,rho**2,n_turns=1,lam_res=lam_res)
+VMEC_AE = ae.AE_vmec(vmec,rho**2,n_turns=np.abs(stel.iota/stel.iotaN),booz=True,lam_res=lam_res,gridpoints=1001,plot=False)
 VMEC_AE.calc_AE(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
-
+VMEC_AE.plot_AE_per_lam()
 
 fl =vmec_fieldlines(vmec,rho**2,0.0,theta1d=np.linspace(-1,1,1000))
 
