@@ -416,7 +416,6 @@ def drift_asymptotic(stel,a_minor,k2):
 ################# functions for geo ##################
 ######################################################
 
-
 def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helicity=0,plot=False):
     import numpy as np
     from simsopt.mhd.vmec_diagnostics import vmec_fieldlines, vmec_splines
@@ -426,8 +425,7 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     iotaN_s = iota_s-helicity
 
     theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
-
-    fieldline = vmec_fieldlines(vmec_s,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
+    fieldline = vmec_fieldlines(vmec_s,s_val,alpha=alpha,theta1d=theta_arr,phi_center=phi_center)
 
     if plot==True:
         plot_surface_and_fl(vmec,fieldline,s_val,transparant=False,trans_val=0.9,title='')
@@ -457,14 +455,8 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
 def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1, helicity=0,plot=False):
     import numpy as np
     from simsopt.mhd.boozer import Boozer
-    from AEpy.mag_reader import boozxform_fieldlines
+    from AEpy.mag_reader import boozxform_fieldlines, boozxform_splines
     from simsopt.mhd.vmec_diagnostics import vmec_fieldlines, vmec_splines
-
-    vmec_s = vmec_splines(vmec)
-    iota_s = vmec_s.iota(s_val)
-    iotaN_s = iota_s-helicity
-
-    theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
 
     # If Boozer object not provided, then run boozxform for given input Vmec
     if not bs:
@@ -472,6 +464,12 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
         bs.register(vmec.s_full_grid)
         bs.run()
 
+    bs = boozxform_splines(bs, vmec)
+    iota_s = bs.iota(s_val)
+    iotaN_s = iota_s-helicity
+
+    theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+    
 
     fieldline = boozxform_fieldlines(vmec,bs,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
 

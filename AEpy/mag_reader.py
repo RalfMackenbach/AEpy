@@ -444,8 +444,6 @@ def boozxform_fieldlines(vs, bs, s, alpha, theta1d=None, phi1d=None, phi_center=
 
     grad_psi_dot_grad_psi = grad_psi_X * grad_psi_X + grad_psi_Y * grad_psi_Y + grad_psi_Z * grad_psi_Z
 
-    mu_0 = 4 * np.pi * (1.0e-7)
-    
 
     # C components
     B_alpha = G + iota[:, None, None] * I
