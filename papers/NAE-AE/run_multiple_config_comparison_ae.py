@@ -40,8 +40,8 @@ for ind_name, name in enumerate(name_array):
         print(ind, ' out of ', N_r, ' (',100*(ind+1)/N_r,'%)        ', end="\r")
         stel.r = r
         NAE_AE = ae.AE_pyQSC(stel_obj = stel, alpha=-0.0, N_turns=3, nphi=nphi,
-                    lam_res=10001, get_drifts=True,normalize='ft-vol',AE_lengthscale='None')
-        NAE_AE.calc_AE(omn=stel.spsi*stel.r*wstar,omt=stel.spsi*stel.r*0.0,omnigenous=True)
+                    lam_res=2, get_drifts=True,normalize='ft-vol',AE_lengthscale='None')
+        NAE_AE.calc_AE_quad(omn=stel.spsi*stel.r*wstar,omt=stel.spsi*stel.r*0.0,omnigenous=True)
         ae_array[ind] = NAE_AE.ae_tot
         ae_nae[ind] = NAE_AE.nae_ae_asymp_weak(stel.r*wstar,1.0)
     print('\n')
