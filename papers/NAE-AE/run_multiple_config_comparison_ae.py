@@ -22,6 +22,7 @@ nphi = 1001
 # print(stel.B20_variation)
 
 
+
 name_array = ["precise QA", "precise QH", "precise QA+well", "precise QH+well", "2022 QA", "2022 QH nfp2", \
        "2022 QH nfp3 vacuum", "2022 QH nfp3 beta", "2022 QH nfp4 long axis", "2022 QH nfp4 well", "2022 QH nfp4 Mercier", \
        "2022 QH nfp7"]
@@ -54,4 +55,7 @@ plt.yscale('log')
 plt.xlabel(r'$AE_\mathrm{nae}$')
 plt.ylabel(r'$AE_\mathrm{num}$')
 plt.legend(ncol = 2)
+
+
+
 plt.show()

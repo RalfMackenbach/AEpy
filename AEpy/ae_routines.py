@@ -382,9 +382,12 @@ def drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res,quad=False,interp_kind='
 
 def drift_asymptotic(stel,a_minor,k2):
     from scipy import  special
+    # NAE drifts, leading order and first order correction
+    # normalized as true drift * q * a * B0 * r / H
+    # 1/B0 dependence due to choice of Bref
     E_k_K_k =  special.ellipe(k2)/special.ellipk(k2)
-    wa0 = a_minor * -stel.etabar/stel.B0*(2*E_k_K_k-1)
-    wa1 = a_minor * -stel.r*stel.etabar/stel.B0*(2/stel.etabar*stel.B20_mean+stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*k2)*E_k_K_k + (1-2*k2)) +\
+    wa0 = a_minor * -stel.etabar / stel.B0 *(2*E_k_K_k-1)
+    wa1 = a_minor * -stel.r*stel.etabar / stel.B0 *(2/stel.etabar*stel.B20_mean+stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*k2)*E_k_K_k + (1-2*k2)) +\
                                                                2/stel.etabar*stel.B2c*(2*E_k_K_k*E_k_K_k - 4*k2*E_k_K_k + (2*k2-1)))
     return wa0, wa1
 
@@ -448,7 +451,7 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     grad_d_alpha    = (fieldline.B_cross_grad_B_dot_grad_alpha).flatten()
     curv_d_psi      = (fieldline.B_cross_kappa_dot_grad_psi).flatten()
     curv_d_alpha    = (fieldline.B_cross_kappa_dot_grad_alpha).flatten()
-    jac             = (fieldline.B_sup_theta_pest).flatten() # This is actually the inverse of the Jacobian
+    jac_inv         = (fieldline.B_sup_theta_pest).flatten()
     Bhat            = modB/Bref
     
     dpsidr          = Bref * Lref * np.sqrt(s_val)
@@ -458,9 +461,9 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     K1              = Lref * curv_d_psi/modB/dpsidr
     L2              = Lref * grad_d_alpha/modB**2/dalphady
     K2              = Lref * curv_d_alpha/modB/dalphady
-    dldtheta        = modB/jac
+    dldtheta        = modB/jac_inv
 
-    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
+    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref,Bref
 
 
 def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1, helicity=0,plot=False):
@@ -479,6 +482,8 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     if not bs:
         bs = Boozer(vmec)
         bs.register(vmec.s_full_grid)
+        bs.verbose = False
+        bs.bx.verbose = False
         bs.run()
 
 
@@ -494,25 +499,28 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     grad_d_alpha    = (fieldline.B_cross_grad_B_dot_grad_alpha).flatten()
     curv_d_psi      = (fieldline.B_cross_kappa_dot_grad_psi).flatten()
     curv_d_alpha    = (fieldline.B_cross_kappa_dot_grad_alpha).flatten()
-    dldtheta        = (fieldline.sqrt_g_b).flatten()*modB/fieldline.iota
     Bhat            = modB/Bref
+    dldtheta        = 1/Bhat # only proportionality matters
     
     dpsidr          = Bref * Lref * np.sqrt(s_val)
     dalphady        = 1/(Lref*np.sqrt(s_val))
+
 
     L1              = Lref * grad_d_psi/modB**2/dpsidr
     K1              = Lref * curv_d_psi/modB/dpsidr
     L2              = Lref * grad_d_alpha/modB**2/dalphady
     K2              = Lref * curv_d_alpha/modB/dalphady
 
-    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref
+    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref,Bref
 
 
-def nae_geo(stel, r, phi, alpha,make_periodic=False):
+def nae_geo(stel, r, alpha,N_turns=1,gridpoints=1001,a_minor=1.0):
     # phi input is in cylindrical coordinates
     # B x grad(B) . grad(psi)
     # alpha = 0
-
+    phi_start   = (-N_turns*np.pi - alpha)/stel.iotaN
+    phi_end     = (+N_turns*np.pi - alpha)/stel.iotaN
+    phi         = np.linspace(phi_start, phi_end, gridpoints)
     # Extract basic properties from pyQSC
     B0 = stel.B0
     B1c = stel.etabar*stel.B0
@@ -596,10 +604,36 @@ def nae_geo(stel, r, phi, alpha,make_periodic=False):
     # Jacobian
     jac_cheeky = (stel.G0+r*r*stel.G2+stel.iota*stel.I2)/B/B
 
-    if make_periodic==True:
-        B[-1] = B[0]
+    # Transform to Boozer coordinates (and now use phi as phi_boozer)
+    from scipy.interpolate import splev, splrep
 
-    return varphi, BxdBdotdalpha, BxdBdotdpsi, BdotdB, B, jac_cheeky, B2
+    BxdBdotdalpha_spline = splrep(varphi, BxdBdotdalpha)
+    BxdBdotdpsi_spline = splrep(varphi, BxdBdotdpsi)
+    B_spline = splrep(varphi, B)
+    B2_spline = splrep(varphi, B2)
+
+    BxdBdotdalpha = splev(phi, BxdBdotdalpha_spline)
+    BxdBdotdpsi = splev(phi, BxdBdotdpsi_spline)
+    B = splev(phi, B_spline)
+    B2 = splev(phi, B2_spline)
+
+    # assign to self, same units as GIST uses
+    dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
+    dalphady    = 1/r # y = r * alpha
+    z      = phi
+    L1     = a_minor*BxdBdotdpsi/B/B/dpsidr
+    L2     = a_minor*BxdBdotdalpha/B/B/dalphady
+    a_minor= a_minor
+    modb   = B
+    dldphi = 1/B #jac_cheeky * B # 1/B when boozer phi is field-line following coordinate
+    B2     = B2
+    
+
+    # we return B instead of B/stel.B0,
+    # so that one can choose the units of B on the fly
+    # example, if one wishes to express B in units of B_ref, then
+    # simply set stel.B0 = 1/B_ref
+    return z, L2, L1, B, dldphi
 
 
 ######################################################
@@ -779,19 +813,11 @@ class AE_pyQSC:
 
         self.stel = stel_obj
 
-
         self.normalize = normalize
 
         # set lengthscales
         self.Delta_r = 1.0
         self.Delta_y = 1.0
-
-
-        # make phi array along which we follow field lines
-        # phi0        = stel.varphi
-        phi_start   = (-N_turns*np.pi - alpha)/stel.iotaN
-        phi_end     = (+N_turns*np.pi - alpha)/stel.iotaN
-        phi         = np.linspace(phi_start, phi_end, nphi)
 
         if not hasattr(stel, 'r'):
             if r:
@@ -803,36 +829,22 @@ class AE_pyQSC:
         else:
             r = stel.r
             print('Using r in the near-axis object given.')
-        varphi, BxdBdotdalpha, BxdBdotdpsi, _, B, jac_cheeky, B2 = nae_geo(stel, r, phi, alpha)
+        z, L2, L1, modb, dldz = nae_geo(stel, r, alpha,N_turns=N_turns,gridpoints=nphi,a_minor=a_minor)
 
-        # Transform to Boozer coordinates (and now use phi as phi_boozer)
-        from scipy.interpolate import splev, splrep
+        self.z = z
+        self.L2= L2
+        self.L1= L1
+        self.modb = modb
+        self.B  = modb
+        self.dldz = dldz
+        self.dldphi = dldz
+        self.phi    = z
+        self.a_minor = a_minor
 
-        BxdBdotdalpha_spline = splrep(varphi, BxdBdotdalpha)
-        BxdBdotdpsi_spline = splrep(varphi, BxdBdotdpsi)
-        B_spline = splrep(varphi, B)
-        B2_spline = splrep(varphi, B2)
-
-        BxdBdotdalpha = splev(phi, BxdBdotdalpha_spline)
-        BxdBdotdpsi = splev(phi, BxdBdotdpsi_spline)
-        B = splev(phi, B_spline)
-        B2 = splev(phi, B2_spline)
-
-        # assign to self, same units as GIST uses
-        dpsidr      = stel.B0*r # psi = B0 * r^2 / 2
-        dalphady    = 1/r # y = r * alpha
-        self.phi    = phi
-        self.z      = phi
-        self.L1     = a_minor*BxdBdotdpsi/B/B/dpsidr
-        self.L2     = a_minor*BxdBdotdalpha/B/B/dalphady
-        self.a_minor= a_minor
-        self.modb   = B
-        self.dldphi = 1/B #jac_cheeky * B # 1/B when boozer phi is field-line following coordinate
-        self.B2     = B2
         
 
         # calculate normalized flux-tube volume
-        self.ft_vol = simpson(self.dldphi/B,self.phi)/simpson(self.dldphi,self.phi)
+        self.ft_vol = simpson(self.dldphi/self.modb,self.phi)/simpson(self.dldphi,self.phi)
 
         self.my_dpdx = 0.0 #stel.r**2 * stel.p2
 
@@ -972,30 +984,38 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None'):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
         from simsopt.mhd.boozer     import  Boozer
 
         if booz:
             if isinstance(booz, Boozer):
-                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
+                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
                                                              gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot)
             else:
-                L1,K1,L2,K2,dldz,modb,theta, Lref = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                              n_turns=n_turns,helicity=helicity,plot=plot)
         else:
-            L1,K1,L2,K2,dldz,modb,theta, Lref = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+            L1,K1,L2,K2,dldz,modb,theta, Lref,Bref = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                          n_turns=n_turns,helicity=helicity,plot=plot)
         
+        if mod_norm=='fl-ave':
+            print('using fl-ave normalization')
+            fl_ave_modb = simpson(modb*dldz,theta)/simpson(dldz,theta)
+            modb=modb/fl_ave_modb
+        if mod_norm=='T':
+            print('using [T] normalization')
+            modb=modb*Bref
+
         # get drifts
-        roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(np.asarray(theta),np.asarray(modb),np.asarray(dldz),np.asarray(L1),np.asarray(L2),np.asarray(K1),np.asarray(K2),lam_res,quad=False,interp_kind='cubic')
+        roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res)
         self.modb  = modb
         self.z      = theta 
         self.dldz   = dldz
         self.normalize = 'ft-vol'
         self.Lref      = Lref
-        self.a_minor   = Lref
+        self.a_minor   = vmec.wout.Aminor_p
         
         # assign to self
         self.roots  = roots_list
@@ -1008,20 +1028,11 @@ class AE_vmec:
         self.Delta_r = 1.0
         self.Delta_y = 1.0
         # set geometry 
-        # plt.plot(theta,dldz)
-        # plt.show()
-        # plt.plot(theta,L1)
-        # plt.show()
-        # plt.plot(theta,L2)
-        # plt.show()
-        # plt.plot(theta,K1)
-        # plt.show()
-        # plt.plot(theta,K2)
-        # plt.show()
         self.L1 = L1
         self.L2 = L2
         self.K1 = K1
         self.K2 = K2
+
         
         # set ft_vol
         self.ft_vol = simpson(self.dldz/self.modb,self.z)/simpson(self.dldz,self.z)
@@ -1322,8 +1333,8 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         ax[1,1].set_xlim(0,1)
         ax[1,0].set_xlabel(r'$k^2$')
         ax[1,1].set_xlabel(r'$k^2$')
-        ax[1,0].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='black')
-        ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='black')
+        ax[1,0].set_ylabel(r'$\langle \hat{\mathbf{v}}_D \cdot \nabla y \rangle$',color='black')
+        ax[1,1].set_ylabel(r'$\langle \hat{\mathbf{v}}_D \cdot \nabla x \rangle$',color='black')
 
 
     # now do plot as a function of bounce-angle
@@ -1356,8 +1367,8 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
     ax[0,1].set_xlabel(r'$z$')
     ax[0,0].set_ylabel(r'$B$')
     ax[0,1].set_ylabel(r'$B$')
-    ax001.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='tab:blue')
-    ax011.set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='tab:blue')
+    ax001.set_ylabel(r'$\langle \hat{\mathbf{v}}_D \cdot \nabla y \rangle$',color='tab:blue')
+    ax011.set_ylabel(r'$\langle \hat{\mathbf{v}}_D \cdot \nabla x \rangle$',color='tab:blue')
     if nae:
         wa0, wa1 = drift_asymptotic(stel,AE_obj.a_minor,AE_obj.k2)
         ax[1,0].plot(AE_obj.k2, wa0, color = 'orange', linestyle='dotted', label='NAE (1st order)')
@@ -1372,8 +1383,8 @@ def plot_precession_func(AE_obj,save=False,filename='AE_precession.eps',nae=Fals
         ax[1,1].scatter(khat**2,wpsi_bounceplot,s=0.2,marker='.',color='black',facecolors='black')
         ax[1,0].set_xlabel(r'$\hat{k}^2$')
         ax[1,1].set_xlabel(r'$\hat{k}^2$')
-        ax[1,0].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla y \rangle$',color='black')
-        ax[1,1].set_ylabel(r'$\langle \mathbf{v}_D \cdot \nabla x \rangle$',color='black')
+        ax[1,0].set_ylabel(r'$\langle \hat{\mathbf{v}}_D \cdot \nabla y \rangle$',color='black')
+        ax[1,1].set_ylabel(r'$\langle \hat{\mathbf{v}}_D \cdot \nabla x \rangle$',color='black')
         ax[1,0].set_xlim(0,1)
         ax[1,1].set_xlim(0,1)
     

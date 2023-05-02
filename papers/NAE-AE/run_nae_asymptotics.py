@@ -24,10 +24,11 @@ c = int(1)
 # set parameters
 plot = False
 omnigenous = True
+alpha       = 0.0
 lam_res = 2
-rho_res = 10
+rho_res = 5
 omn_arr = np.asarray([1,100,10000])
-file_qsc = "precise QA+well"
+file_qsc = "precise QA"
 
 
 # make stellarator in QSC
@@ -61,7 +62,7 @@ for rho_idx, rho in enumerate(rho_arr):
     stel.calculate()
     for omn_idx, omn in enumerate(omn_arr):
         omn = omn_arr[omn_idx] * rho
-        NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=20*nphi+1,
+        NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=alpha, N_turns=1, nphi=10*nphi+1,
                     lam_res=lam_res,get_drifts=False,normalize='ft-vol',AE_lengthscale='None')
         NAE_AE.calc_AE_quad(omn=stel.spsi*omn,omt=0.0,omnigenous=omnigenous)
         ae_num_qsc_weak[rho_idx,omn_idx] = NAE_AE.ae_tot
@@ -123,8 +124,10 @@ ax.legend(custom_lines, [r'weakly driven', 'strongly driven',r'$\varrho_{\mathrm
 
 ax.set_xlim([rho_arr.min(),1.0])
 ax.set_ylim(bottom=0.1)
-plt.title(r'precise QA+well')
+plt.title(r'precise QA')
 
 plt.savefig('figures/ae_asymptotics.png',dpi=1000,bbox_inches='tight')
 
 plt.show()
+
+print(ae_num_qsc_weak)

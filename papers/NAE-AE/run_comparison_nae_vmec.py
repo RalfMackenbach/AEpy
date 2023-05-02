@@ -24,7 +24,7 @@ omnigenous = True
 lam_res = 2
 
 # set rho res
-rho_res = 100
+rho_res = 50
 
 
 
@@ -74,9 +74,6 @@ nphi = int(1e3+1)
 stel = Qsc.from_paper('precise QA', nphi = nphi)
 stel.spsi = -1
 stel.zs = -stel.zs
-stel.B0 = B_ref
-stel.R0 = R_major
-
 
 
 
@@ -98,19 +95,19 @@ for idx, rho in enumerate(rho_arr):
             NAE_AE.plot_AE_per_lam()
             NAE_AE.plot_precession(nae=True,stel=stel)
     if rho > rho_break:
-        VMEC_AE = ae.AE_vmec(vmec,rho**2,n_turns=1,lam_res=lam_res)
+        VMEC_AE = ae.AE_vmec(vmec,rho**2,n_turns=1,lam_res=lam_res,mod_norm='T')
         VMEC_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
         ae_num_vmec[idx] = VMEC_AE.ae_tot
         iota_s = splines.iota(rho**2)
         if plot:
             VMEC_AE.plot_AE_per_lam()
             VMEC_AE.plot_precession(nae=True,stel=stel,q=1/iota_s)
-        BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res)
-        BOOZ_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
-        ae_num_booz[idx] = BOOZ_AE.ae_tot
-        if plot:
-            VMEC_AE.plot_AE_per_lam()
-            BOOZ_AE.plot_precession(nae=True,stel=stel,q=1/iota_s)
+        # BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res,mod_norm='T')
+        # BOOZ_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
+        # ae_num_booz[idx] = BOOZ_AE.ae_tot
+        # if plot:
+        #     BOOZ_AE.plot_AE_per_lam()
+        #     BOOZ_AE.plot_precession(nae=True,stel=stel,q=1/iota_s)
 
     # Asymptotic AE
     asym_ae_weak[idx] = NAE_AE.nae_ae_asymp_weak(omn_input,a_minor)
@@ -127,13 +124,16 @@ for idx, rho in enumerate(rho_arr):
 
 # plot
 
-fig, ax = plt.subplots(1,1,figsize=(10,5),tight_layout=True)
 
-ax.loglog(rho_arr,asym_ae_weak,label=r'$\widehat{A}_\mathrm{asymp,weak}$',color='black',linestyle='dotted')
-ax.loglog(rho_arr,asym_ae_strong,label=r'$\widehat{A}_\mathrm{asymp,strong}$',color='black',linestyle='--')
+fig, ax = plt.subplots(1,1,figsize=(6,4),tight_layout=True)
+
+
+fig.suptitle(r'precise QA')
+ax.loglog(rho_arr,asym_ae_weak,label=r'$\widehat{A}_\mathrm{asymp,weak}$',color='red',linestyle='dotted')
+ax.loglog(rho_arr,asym_ae_strong,label=r'$\widehat{A}_\mathrm{asymp,strong}$',color='red',linestyle='--')
 ax.scatter(rho_arr,ae_num_qsc,label=r'$\widehat{A}_\mathrm{qsc}$',color='black',marker='x')
 ax.scatter(rho_arr,ae_num_vmec,label=r'$\widehat{A}_\mathrm{vmec}$',color='black',marker='o')
-ax.scatter(rho_arr,ae_num_booz,label=r'$\widehat{A}_\mathrm{booz}$',color='blue',marker='o')
+# ax.scatter(rho_arr,ae_num_booz,label=r'$\widehat{A}_\mathrm{booz}$',color='blue',marker='o')
 ax.set_ylabel(r'$\widehat{A}$')
 ax.set_xlabel(r'$\varrho$')
 ax.grid()
@@ -141,4 +141,5 @@ ax.tick_params(direction='in')
 ax.set_xlim([rho_arr[0],rho_arr[-1]])
 ax.set_ylim([np.nanmin(ae_num_qsc)/2,np.nanmax(ae_num_vmec)*2])
 ax.legend()
+plt.savefig('./figures/comparison_nae_vmec_AE.pdf',dpi=1000)
 plt.show()
