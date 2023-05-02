@@ -26,7 +26,7 @@ plot = False
 omnigenous = True
 alpha       = 0.0
 lam_res = 2
-rho_res = 5
+rho_res = 50
 omn_arr = np.asarray([1,100,10000])
 file_qsc = "precise QA"
 
@@ -129,5 +129,3 @@ plt.title(r'precise QA')
 plt.savefig('figures/ae_asymptotics.png',dpi=1000,bbox_inches='tight')
 
 plt.show()
-
-print(ae_num_qsc_weak)

@@ -85,9 +85,9 @@ stel_HSX = Qsc( nfp=4,
 stel_HSX.zs = -stel_HSX.zs
 
 
-stel_QA  = Qsc.from_paper('precise QA')
+stel_QA     = Qsc.from_paper('precise QA')
 stel_QA.zs  = -stel_QA.zs
-stel_QA.spsi = -1
+stel_QA.spsi= -1
 
 stel_QH  = Qsc.from_paper('precise QH')
 stel_QH.zs  = -stel_QH.zs
@@ -113,7 +113,6 @@ wout_QH = vmec_QH.wout
 a_minor_HSX = wout_HSX.Aminor_p
 a_minor_QA = wout_QA.Aminor_p
 a_minor_QH = wout_QH.Aminor_p
-print(a_minor_HSX)
 
 
 lam_res = 1001
@@ -130,7 +129,8 @@ fig, ax = plt.subplots(2,3,figsize=(6,4),sharex=True,sharey=True,tight_layout=Tr
 # do precise QA first
 for idx, rho in enumerate(rho_arr):
     # find r
-    stel_QA.r = a_minor_QA*rho
+    edge_toroidal_flux_over_2pi = np.abs(vmec_QA.wout.phi[-1] / (2 * np.pi))
+    stel_QA.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_QA.B0) 
     stel_QA.calculate()
     VMEC_AE_QA = ae.AE_vmec(vmec_QA,rho**2,n_turns=1.0*np.abs(stel_QA.iota/stel_QA.iotaN),
                         booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
@@ -140,7 +140,8 @@ for idx, rho in enumerate(rho_arr):
 # now, precise QH
 for idx, rho in enumerate(rho_arr):
     # find r
-    stel_QH.r = a_minor_QH*rho
+    edge_toroidal_flux_over_2pi = np.abs(vmec_QH.wout.phi[-1] / (2 * np.pi))
+    stel_QH.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_QH.B0) #a_minor_QH*rho
     # omn and omt not needed, but let's set anyhow
     stel_QH.calculate()
     VMEC_AE_QH = ae.AE_vmec(vmec_QH,rho**2,n_turns=1.0*np.abs(stel_QH.iota/stel_QH.iotaN),
@@ -151,17 +152,17 @@ for idx, rho in enumerate(rho_arr):
 # now, HSX
 for idx, rho in enumerate(rho_arr):
     # find r
-    stel_HSX.r = a_minor_HSX*rho
+    edge_toroidal_flux_over_2pi = np.abs(vmec_HSX.wout.phi[-1] / (2 * np.pi))
+    stel_HSX.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_HSX.B0) 
     # omn and omt not needed, but let's set anyhow
     stel_HSX.calculate()
     fl =vmec_fieldlines(vmec_HSX,rho**2,0.0,theta1d=np.linspace(-1,1,3))
     iota = fl.iota[0]
     iotaN = iota - 4
-
-    if rho==0.1:
-        conv_fac = 1.0829542993285683 # tweaked to have exactly one well. needed likely due to poor QS of HSX
-    if rho==1.0:
-        conv_fac = 1.0
+    VMEC_AE_HSX = ae.AE_vmec(vmec_HSX,rho**2,n_turns=1.0*np.abs(iota/iotaN),
+                        booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
+                        mod_norm='T')
+    conv_fac = VMEC_AE_HSX.z[0]/VMEC_AE_HSX.z[np.argmax(VMEC_AE_HSX.modb)] # tweaked to have exactly one well. needed likely due to poor QS of HSX
     VMEC_AE_HSX = ae.AE_vmec(vmec_HSX,rho**2,n_turns=1.0*np.abs(iota/iotaN)*1/conv_fac,
                         booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
                         mod_norm='T')

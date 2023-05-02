@@ -24,7 +24,7 @@ omnigenous = True
 lam_res = 2
 
 # set rho res
-rho_res = 50
+rho_res = 20
 
 
 
@@ -34,7 +34,7 @@ omt = 0.0
 
 
 # Set up arrays
-rho_arr = np.logspace(-5,0,rho_res) # rho = r / a_minor
+rho_arr = np.logspace(-4,0,rho_res) # rho = r / a_minor
 ae_num_qsc      = np.empty_like(rho_arr)*np.nan
 ae_num_vmec     = np.empty_like(rho_arr)*np.nan
 ae_num_booz     = np.empty_like(rho_arr)*np.nan
@@ -55,7 +55,7 @@ wout = vmec.wout
 a_minor = wout.Aminor_p
 R_major = wout.Rmajor_p
 B_ref = 2 * np.abs(wout.phi[-1] / (2 * np.pi)) / (wout.Aminor_p)**2
-print(B_ref,R_major,a_minor,a_minor/R_major)
+# print(B_ref,R_major,a_minor,a_minor/R_major)
 
 # make Booz
 bs = Boozer(vmec)
@@ -82,7 +82,9 @@ splines = vmec_splines(vmec)
 
 # loop over r
 for idx, rho in enumerate(rho_arr):
-    stel.r = a_minor*rho
+    print(rho)
+    edge_toroidal_flux_over_2pi = np.abs(vmec.wout.phi[-1] / (2 * np.pi))
+    stel.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel.B0)
     omn_input = omn * rho
     omt_input = omt * rho
     stel.calculate()
@@ -101,13 +103,13 @@ for idx, rho in enumerate(rho_arr):
         iota_s = splines.iota(rho**2)
         if plot:
             VMEC_AE.plot_AE_per_lam()
-            VMEC_AE.plot_precession(nae=True,stel=stel,q=1/iota_s)
-        # BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res,mod_norm='T')
-        # BOOZ_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
-        # ae_num_booz[idx] = BOOZ_AE.ae_tot
-        # if plot:
-        #     BOOZ_AE.plot_AE_per_lam()
-        #     BOOZ_AE.plot_precession(nae=True,stel=stel,q=1/iota_s)
+            VMEC_AE.plot_precession(nae=True,stel=stel,iota=iota_s)
+        BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res,mod_norm='T')
+        BOOZ_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
+        ae_num_booz[idx] = BOOZ_AE.ae_tot
+        if plot:
+            BOOZ_AE.plot_AE_per_lam()
+            BOOZ_AE.plot_precession(nae=True,stel=stel,iota=iota_s)
 
     # Asymptotic AE
     asym_ae_weak[idx] = NAE_AE.nae_ae_asymp_weak(omn_input,a_minor)
@@ -133,7 +135,7 @@ ax.loglog(rho_arr,asym_ae_weak,label=r'$\widehat{A}_\mathrm{asymp,weak}$',color=
 ax.loglog(rho_arr,asym_ae_strong,label=r'$\widehat{A}_\mathrm{asymp,strong}$',color='red',linestyle='--')
 ax.scatter(rho_arr,ae_num_qsc,label=r'$\widehat{A}_\mathrm{qsc}$',color='black',marker='x')
 ax.scatter(rho_arr,ae_num_vmec,label=r'$\widehat{A}_\mathrm{vmec}$',color='black',marker='o')
-# ax.scatter(rho_arr,ae_num_booz,label=r'$\widehat{A}_\mathrm{booz}$',color='blue',marker='o')
+ax.scatter(rho_arr,ae_num_booz,label=r'$\widehat{A}_\mathrm{booz}$',color='blue',marker='o')
 ax.set_ylabel(r'$\widehat{A}$')
 ax.set_xlabel(r'$\varrho$')
 ax.grid()
@@ -141,5 +143,5 @@ ax.tick_params(direction='in')
 ax.set_xlim([rho_arr[0],rho_arr[-1]])
 ax.set_ylim([np.nanmin(ae_num_qsc)/2,np.nanmax(ae_num_vmec)*2])
 ax.legend()
-plt.savefig('./figures/comparison_nae_vmec_AE.pdf',dpi=1000)
+plt.savefig('./figures/comparison_nae_vmec_AE.png',dpi=1000)
 plt.show()
