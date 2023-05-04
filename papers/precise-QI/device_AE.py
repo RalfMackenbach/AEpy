@@ -20,7 +20,7 @@ def dAE_ds(vmec,n=1.0,T=1.0,omn=2.0,omt=2.0,s=0.5,omnigenous=False, plot=False,g
     elif symmetry=='QA':
         turns_fac = 3/n_turns
     # set up AE object
-    VMEC_AE = ae.AE_vmec(vmec,s,n_turns=n_turns*turns_fac,lam_res=1001,gridpoints=gridpoints,plot=False,epsrel=epsrel_AE)
+    VMEC_AE = ae.AE_vmec(vmec,s,n_turns=n_turns*turns_fac,lam_res=2,gridpoints=gridpoints,plot=False,epsrel=epsrel_AE)
     # calculate AE per thermal energy
     VMEC_AE.calc_AE_quad(omn=omn,omt=omt,omnigenous=omnigenous)
     if plot:

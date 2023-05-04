@@ -22,9 +22,9 @@ def dAE_ds(vmec,n=1.0,T=1.0,omn=2.0,omt=2.0,s=0.5,omnigenous=False, plot=False,g
     elif symmetry=='QA':
         turns_fac = 3/n_turns
     # set up AE object
-    VMEC_AE = ae.AE_vmec(vmec,s,n_turns=n_turns*turns_fac,lam_res=1001,gridpoints=gridpoints,plot=False,epsrel=epsrel_AE)
+    VMEC_AE = ae.AE_vmec(vmec,s,n_turns=n_turns*turns_fac,lam_res=101,gridpoints=gridpoints,plot=False,epsrel=epsrel_AE)
     # calculate AE per thermal energy
-    VMEC_AE.calc_AE_quad(omn=omn,omt=omt,omnigenous=omnigenous)
+    VMEC_AE.calc_AE(omn=omn,omt=omt,omnigenous=omnigenous,fast=True)
     if plot:
         VMEC_AE = ae.AE_vmec(vmec,s,n_turns=n_turns*turns_fac,lam_res=1000,gridpoints=gridpoints,plot=False,epsrel=epsrel_AE)
         VMEC_AE.calc_AE(omn=omn,omt=omt,omnigenous=omnigenous)
@@ -49,7 +49,7 @@ def device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=10,omnigenous=False,plot=False,symm
     # loop over s values
     for i in range(len(s_arr)):
         s = s_arr[i]
-        AE_arr[i] = dAE_ds(vmec,n_f(s),T_f(s),omn_f(s),omt_f(s),s,omnigenous=omnigenous,plot=False,symmetry=symmetry)
+        AE_arr[i] = dAE_ds(vmec,n_f(s),T_f(s),omn_f(s),omt_f(s),s,omnigenous=omnigenous,plot=plot,symmetry=symmetry)
     # also find the total thermal energy
     def integrand_2(s):
         s_half_grid_arr = vmec.s_half_grid

@@ -8,7 +8,7 @@ import time
 
 # construct input parameters
 omnigenous = False
-eta = (2/3)
+eta = 0.0
 
 # construct density and temperature profiles
 s_sym = sp.Symbol('s_sym')
@@ -30,7 +30,9 @@ vmec = Vmec('./configs/wout_nfp2_beta_0.00.nc',verbose=True)
 
 
 start_time = time.time()
-ans = device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=5,omnigenous=False,plot=False,symmetry='QI')
+ans = device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=10,omnigenous=False,plot=False,symmetry='QI')
 print("data generated in       --- %s seconds ---" % (time.time() - start_time))
+
+_ = device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=1,omnigenous=False,plot=True,symmetry='QI')
 
 print(ans)

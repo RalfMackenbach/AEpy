@@ -1043,7 +1043,7 @@ class AE_vmec:
         
         
 
-    def calc_AE(self,omn,omt,omnigenous):
+    def calc_AE(self,omn,omt,omnigenous,fast=False):
         # loop over all lambda
         Delta_r = self.Delta_r
         Delta_y = self.Delta_y
@@ -1054,8 +1054,12 @@ class AE_vmec:
                 wpsi_at_lam     = Delta_y*self.wpsi[lam_idx]
                 walpha_at_lam   = Delta_r*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
-                integrand       = lambda x: AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x)
-                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=10000)
+                if fast==False:
+                    integrand       = lambda x: AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x)
+                    ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=10000)
+                if fast==True:
+                    integrand       = lambda x: np.sum(AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x))
+                    ae_at_lam, _    = quad(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=10000)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
         if omnigenous==True:
             for lam_idx, lam_val in enumerate(self.lam):
