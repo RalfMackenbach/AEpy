@@ -5,9 +5,11 @@ from    scipy.integrate                 import  quad
 from    simsopt.mhd                     import  vmec_splines
     
 
+# this one is meant for optimisation purposes
+
 
 def dAE_ds(vmec,n=1.0,T=1.0,omn=2.0,omt=2.0,s=0.5,omnigenous=False, plot=False,gridpoints=1001,n_turns=4,symmetry='QI'):
-    epsrel_AE = 1e-1
+    epsrel_AE = 1e-2
     vmec.run()
     splines = vmec_splines(vmec)
     iota = splines.iota(s)
@@ -39,37 +41,22 @@ def dAE_ds(vmec,n=1.0,T=1.0,omn=2.0,omt=2.0,s=0.5,omnigenous=False, plot=False,g
     return dAE_ds
 
 
-def device_AE(vmec,n_f,T_f,omn_f,omt_f,omnigenous=False,plot=False,symmetry='QI'):
-    epsrel_profile = 1e-1
-    # set up vmec object
-    # construct integrand
-    s_list = []
-    ae_list =[]
-    def integrand(s):
-        dAEds_val = dAE_ds(vmec,n_f(s),T_f(s),omn_f(s),omt_f(s),s,omnigenous=omnigenous,plot=False,symmetry=symmetry)
-        s_list.append(s)
-        ae_list.append(dAEds_val)
-        return dAEds_val
-    # integrate
-    device_AE_arr = quad(integrand,0,1,epsrel=epsrel_profile)
-    device_AE_val = device_AE_arr[0]
-    if plot:
-        import matplotlib.pyplot as plt
-        # plot integrand
-        plt.scatter(s_list,ae_list)
-        plt.xlabel('s')
-        plt.ylabel('dAE/ds')
-        plt.show()
-        # plot AE 
-        s_plot=0.5
-        dAE_ds(vmec,n_f(s_plot),T_f(s_plot),omn_f(s_plot),omt_f(s_plot),s_plot,omnigenous=omnigenous,plot=True,symmetry=symmetry)
+def device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=10,omnigenous=False,plot=False,symmetry='QI'):
+    # construct list of s values
+    s_arr = np.linspace(0,1,s_res+2)
+    s_arr = s_arr[1:-1]
+    AE_arr = np.zeros_like(s_arr)
+    # loop over s values
+    for i in range(len(s_arr)):
+        s = s_arr[i]
+        AE_arr[i] = dAE_ds(vmec,n_f(s),T_f(s),omn_f(s),omt_f(s),s,omnigenous=omnigenous,plot=False,symmetry=symmetry)
     # also find the total thermal energy
     def integrand_2(s):
         s_half_grid_arr = vmec.s_half_grid
         dVds_arr = 4 * np.pi * np.pi * np.abs(vmec.wout.gmnc[0, 1:])
         dVds_f = InterpolatedUnivariateSpline(s_half_grid_arr, dVds_arr, ext='extrapolate')
         return n_f(s)*T_f(s) * dVds_f(s)
-    thermal_energy_arr = quad(integrand_2,0,1,epsrel=epsrel_profile)
+    thermal_energy_arr = quad(integrand_2,0,1)
     thermal_energy = thermal_energy_arr[0]
-    return device_AE_val/thermal_energy
+    return AE_arr/thermal_energy
     

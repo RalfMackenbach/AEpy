@@ -796,7 +796,8 @@ class AE_gist:
 
 class AE_pyQSC:
     def __init__(self, stel_obj=None, name='precise QH', r=[], alpha=0.0, N_turns=3, nphi=1001,
-                 lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=1.0):
+                 lam_res=1000, get_drifts=True,normalize='ft-vol',AE_lengthscale='None',a_minor=1.0,
+                 epsrel=1e-4):
         import matplotlib.pyplot as plt
         # Construct stellarator
         # if no stellarator given, use from paper
@@ -838,6 +839,7 @@ class AE_pyQSC:
         self.dldphi = dldz
         self.phi    = z
         self.a_minor = a_minor
+        self.epsrel = epsrel
 
         
 
@@ -870,7 +872,7 @@ class AE_pyQSC:
                 walpha_at_lam   = Delta_r*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
                 integrand       = lambda x: AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x)
-                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=1e-6,epsabs=1e-20, limit=1000)
+                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=1000)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
         if omnigenous==True:
             for lam_idx, lam_val in enumerate(self.lam):
@@ -922,11 +924,11 @@ class AE_pyQSC:
                 walpha_arr      = Delta_r*np.asarray(walpha_list).flatten()
                 taub_arr        = np.asarray(tau_b_list).flatten()
                 integrand_2     = lambda z: np.sum(AE_per_lam_per_z(walpha_arr,wpsi_arr,Delta_r*w_diamag(-omn,-omt,z),taub_arr,z))
-                ans, _ = quad(integrand_2,0.0,np.inf,epsrel=1e-3)
+                ans, _ = quad(integrand_2,0.0,np.inf,epsrel=self.epsrel)
                 # plt.scatter(k2,ans,marker='o',s=0.1)
                 return ans
             # do integral
-            ae_arr = quad(integrand,0.0,1.0,epsrel=1e-4,epsabs=1e-16,limit=10000)#,points=special_k2)
+            ae_arr = quad(integrand,0.0,1.0,epsrel=self.epsrel,epsabs=1e-16,limit=10000)#,points=special_k2)
         if omnigenous==True:
             # construct integrand
             def integrand(k2):
@@ -943,7 +945,7 @@ class AE_pyQSC:
                 # print(k2,ans)
                 return ans
             # do integral
-            ae_arr =  quad(integrand,0.0,1.0,epsrel=1e-4,epsabs=1e-16,limit=10000)#,points=special_k2)
+            ae_arr =  quad(integrand,0.0,1.0,epsrel=self.epsrel,epsabs=1e-16,limit=10000)#,points=special_k2)
             
         # plt.show()
         if self.normalize=='ft-vol':
@@ -982,7 +984,7 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None'):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',epsrel=1e-4):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
         from simsopt.mhd.boozer     import  Boozer
@@ -1014,6 +1016,7 @@ class AE_vmec:
         self.normalize = 'ft-vol'
         self.Lref      = Lref
         self.a_minor   = vmec.wout.Aminor_p
+        self.epsrel    = epsrel
         
         # assign to self
         self.roots  = roots_list
@@ -1052,7 +1055,7 @@ class AE_vmec:
                 walpha_at_lam   = Delta_r*self.walpha[lam_idx]
                 taub_at_lam     = self.taub[lam_idx]
                 integrand       = lambda x: AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x)
-                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=1e-6,epsabs=1e-20, limit=10000)
+                ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=10000)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
         if omnigenous==True:
             for lam_idx, lam_val in enumerate(self.lam):
@@ -1093,9 +1096,9 @@ class AE_vmec:
                 walpha_arr      = Delta_r*np.asarray(walpha_list).flatten()
                 taub_arr        = np.asarray(tau_b_list).flatten()
                 integrand_2     = lambda z: np.sum(AE_per_lam_per_z(walpha_arr,wpsi_arr,Delta_r*w_diamag(-omn,-omt,z),taub_arr,z))
-                ans, _ = quad(integrand_2,0.0,np.inf,epsrel=1e-3)
+                ans, _ = quad(integrand_2,0.0,np.inf,epsrel=self.epsrel)
                 return ans
-            ae_arr = quad(integrand,0.0,1.0)#,points=special_k2)
+            ae_arr = quad(integrand,0.0,1.0,epsrel=self.epsrel)#,points=special_k2)
         if omnigenous==True:
             def integrand(k2):
                 lam = - (k2 * (bmax - bmin) - bmax) / (bmax*bmin)
@@ -1109,7 +1112,7 @@ class AE_vmec:
                 ans     = np.sum(AE_per_lam(c0,c1,taub_arr,walpha_arr))
                 # plt.scatter(k2,ans,color='black',marker='o',s=0.2)
                 return ans
-            ae_arr = quad(integrand,0.0,1.0)#,points=special_k2)
+            ae_arr = quad(integrand,0.0,1.0,epsrel=self.epsrel)#,points=special_k2)
         # plt.show()
         if self.normalize=='ft-vol':
             ae_tot = ae_arr[0]/self.ft_vol
@@ -1466,7 +1469,7 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     ax.set_ylabel(r'$B$')
     ax2.set_ylabel(r'$\omega_\alpha, \quad \omega_\psi$')
     ax2.tick_params(axis='y', colors='black',direction='in')
-    ax.set_xlabel(r'$\varphi/\pi$')
+    ax.set_xlabel(r'$z/\pi$')
     ax.tick_params(axis='both',direction='in')
     ax2.legend(loc='lower right')
     max_norm = 1.0
