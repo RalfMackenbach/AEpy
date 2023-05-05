@@ -24,7 +24,7 @@ omnigenous = True
 lam_res = 2
 
 # set rho res
-rho_res = 20
+rho_res = 40
 
 
 
