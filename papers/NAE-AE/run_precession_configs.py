@@ -136,6 +136,7 @@ n_chi_turns = 1.0
 # now, HSX
 for idx, rho in enumerate(rho_arr):
     # find r
+    print(rho)
     edge_toroidal_flux_over_2pi = np.abs(vmec_HSX.wout.phi[-1] / (2 * np.pi))
     stel_HSX.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_HSX.B0) 
     # omn and omt not needed, but let's set anyhow
@@ -201,10 +202,10 @@ ax[1,2].set_xlim([0.0,1.0])
 ax[0,0].set_ylabel(r'$\hat{\omega}_\alpha$')
 ax[1,0].set_ylabel(r'$\hat{\omega}_\alpha$')
 ax[1,0].set_ylabel(r'$\hat{\omega}_\alpha$')
-ax[1,0].set_xlabel(r'$\hat{k}$')
-ax[1,1].set_xlabel(r'$\hat{k}$')
-ax[1,1].set_xlabel(r'$\hat{k}$')
-ax[1,2].set_xlabel(r'$\hat{k}$')
+ax[1,0].set_xlabel(r'$k$')
+ax[1,1].set_xlabel(r'$k$')
+ax[1,1].set_xlabel(r'$k$')
+ax[1,2].set_xlabel(r'$k$')
 
 ax[0,0].grid()
 ax[0,1].grid()

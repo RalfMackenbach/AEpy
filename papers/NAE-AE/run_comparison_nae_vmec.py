@@ -29,7 +29,7 @@ rho_res = 40
 
 
 # omn/rho and omt/rho
-omn = 50.0
+omn = 10.0
 omt = 0.0
 
 
@@ -145,3 +145,6 @@ ax.set_ylim([np.nanmin(ae_num_qsc)/2,np.nanmax(ae_num_vmec)*2])
 ax.legend()
 plt.savefig('./figures/comparison_nae_vmec_AE.png',dpi=1000)
 plt.show()
+
+# finally save data
+np.savez('./data/comparison_nae_vmec_AE.npz',rho_arr=rho_arr,ae_num_qsc=ae_num_qsc,ae_num_vmec=ae_num_vmec,ae_num_booz=ae_num_booz,asym_ae_weak=asym_ae_weak,asym_ae_strong=asym_ae_strong)
