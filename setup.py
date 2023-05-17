@@ -6,6 +6,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         'numpy',
-        'scipy'
+        'scipy',
+        'f90nml',
+        'matplotlib'
     ]
 )
