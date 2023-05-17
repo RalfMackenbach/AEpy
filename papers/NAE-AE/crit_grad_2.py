@@ -15,7 +15,7 @@ from matplotlib.lines import Line2D
 
 
 nphi = int(1e3+1)
-name='2022 QH nfp4 well'
+name='precise QH'
 stel = Qsc.from_paper(name, nphi = nphi)
 B20_base = stel.B20
 
@@ -57,11 +57,11 @@ ax[0].set_xlabel(r'$1.61 \dots \cdot \eta$')
 ax[0].set_ylabel(r'$\omega_\mathrm{crit}$')
 
 ax[1].scatter(B20_arr,crit_arr/crit_lead-1,alpha=0.5)
-ax[1].set_ylabel(r'$\omega_{\mathrm{crit,num}}/\omega_{\mathrm{crit,0}}$')
+ax[1].set_ylabel(r'$\omega_{\mathrm{crit,num}}/\omega_{\mathrm{crit,0}}-1$')
 ax[1].set_xlabel(r'$\langle B_{20} \rangle$')
 
 
-fig.suptitle(r'$r = 10^{-2}$')
+fig.suptitle(r'$r = 10^{-2}$, precise QA+well')
 
 
 

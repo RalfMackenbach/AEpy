@@ -57,6 +57,8 @@ def periodic_extender(arr,l_max,r_max):
     arr_ext     = np.concatenate((arr_pre,arr,arr_app))
     return  arr_ext
 
+
+
 def boozxform_splines(boozer, vmec):
     """
     Initialize radial splines for a boozxform equilibrium.
@@ -116,6 +118,8 @@ def boozxform_splines(boozer, vmec):
         results.__setattr__(v, eval(v))
 
     return results
+
+
 
 def boozxform_fieldlines(vs, bs, s, alpha, theta1d=None, phi1d=None, phi_center=0, phi_sec = 0, plot=False, show=True, save = False):
     r"""

@@ -24,8 +24,8 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
             'size': 10}
 
     mpl.rc('font', **font)
-    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*4.0))
-    ax.set_xlim(min(AE_obj.z)/np.pi,max(AE_obj.z)/np.pi)
+    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*4.0),constrained_layout=True)
+    ax.set_xlim(min(AE_obj.z)/(AE_obj.z).max(),max(AE_obj.z)/(AE_obj.z).max())
 
     lam_arr   = np.asarray(AE_obj.lam).flatten()
     ae_per_lam = AE_obj.ae_per_lam
@@ -48,11 +48,11 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
             bws = roots[idx_lam]
             # check if well crosses boundary
             if(bws[2*idx_bw] > bws[2*idx_bw+1]):
-                ax.plot([bws[2*idx_bw]/np.pi, max(AE_obj.z)/np.pi], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
-                ax.plot([min(AE_obj.z)/np.pi, bws[2*idx_bw+1]/np.pi], [b_val, b_val],color=colors_plot[idx_lam][idx_bw])
+                ax.plot([bws[2*idx_bw]/(AE_obj.z).max(), max(AE_obj.z)/(AE_obj.z).max()], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
+                ax.plot([min(AE_obj.z)/(AE_obj.z).max(), bws[2*idx_bw+1]/(AE_obj.z).max()], [b_val, b_val],color=colors_plot[idx_lam][idx_bw])
             # if not normal plot
             else:
-                ax.plot([bws[2*idx_bw]/np.pi, bws[2*idx_bw+1]/np.pi], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
+                ax.plot([bws[2*idx_bw]/(AE_obj.z).max(), bws[2*idx_bw+1]/(AE_obj.z).max()], [b_val, b_val], color=colors_plot[idx_lam][idx_bw])
 
     # now do plot as a function of bounce-angle
     walpha_bounceplot = []
@@ -75,7 +75,7 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
 
     roots_ordered = [root/np.pi for root in roots_ordered]
 
-    ax.plot(AE_obj.z/np.pi,AE_obj.modb,color='black',linewidth=2)
+    ax.plot(AE_obj.z/(AE_obj.z).max(),AE_obj.modb,color='black',linewidth=2)
     ax2 = ax.twinx()
     
 
@@ -92,13 +92,16 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     idx0=find_nearest(AE_obj.walpha, 0.0)
     lam0= AE_obj.lam[idx0][0]
     ax.axhline(1/lam0,color='green',linestyle='dashed')
-    ax.set_ylabel(r'$B$')
+    # ax.set_ylabel(r'$B$')
     # ax2.set_ylabel(r'$\omega_\alpha$',color='tab:green')
     ax2.tick_params(axis='y', colors='black',direction='in')
+    ax.set_yticks([(AE_obj.modb).min(),(AE_obj.modb).max()])
+    ax.set_yticklabels([r'$B_\mathrm{min}$',r'$B_\mathrm{max}$'])
     ax2.set_yticks([])
-    ax.set_yticks([])
-    ax.set_xticks([])
-    ax.set_xlabel(r'$\chi$')
+    ax.xaxis.tick_top()
+    ax.xaxis.set_label_position('top') 
+    ax.set_xticks([-1,0,1])
+    ax.set_xlabel(r'$\chi/\pi$')
     # ax.tick_params(axis='both',direction='in')
     # ax2.legend(loc='lower right')
     max_norm = 1.0
