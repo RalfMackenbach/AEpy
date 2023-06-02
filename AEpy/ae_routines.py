@@ -428,7 +428,7 @@ def drift_asymptotic(stel,a_minor,k2):
 ################# functions for geo ##################
 ######################################################
 
-def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helicity=0,plot=False):
+def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helicity=0,plot=False,QS_mapping=False):
     import numpy as np
     from simsopt.mhd.vmec_diagnostics import vmec_fieldlines, vmec_splines
 
@@ -436,7 +436,10 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     iota_s = vmec_s.iota(s_val)
     iotaN_s = iota_s-helicity
 
-    theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+    if QS_mapping==True:
+        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
+    if QS_mapping==False:
+        theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
     if theta_arr[-1] < theta_arr[0]:
         theta_arr = theta_arr[::-1]
 
@@ -464,10 +467,10 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     K2              = Lref * curv_d_alpha/modB/dalphady
     dldtheta        = modB/jac_inv
 
-    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref,Bref
+    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref,Bref, iota_s, iotaN_s
 
 
-def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1, helicity=0,plot=False):
+def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1, helicity=0,plot=False,QS_mapping=True):
     import numpy as np
     from simsopt.mhd.boozer import Boozer
     from AEpy.mag_reader import boozxform_fieldlines, boozxform_splines
@@ -485,7 +488,10 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     iota_s = bs.iota(s_val)
     iotaN_s = iota_s-helicity
 
-    theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+    if QS_mapping==False:
+        theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    else:
+        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
     
 
     fieldline = boozxform_fieldlines(vmec,bs,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
@@ -512,7 +518,7 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     L2              = Lref * grad_d_alpha/modB**2/dalphady
     K2              = Lref * curv_d_alpha/modB/dalphady
 
-    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref,Bref
+    return L1,K1,L2,K2,dldtheta,Bhat,theta_arr,Lref,Bref, iota_s, iotaN_s
 
 
 def nae_geo(stel, r, alpha,N_turns=1,gridpoints=1001,a_minor=1.0):
@@ -994,21 +1000,21 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',epsrel=1e-4):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',QS_mapping=False,epsrel=1e-4):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
         from simsopt.mhd.boozer     import  Boozer
 
         if booz:
             if isinstance(booz, Boozer):
-                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
-                                                             gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot)
+                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
+                                                             gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
             else:
-                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
-                                                             n_turns=n_turns,helicity=helicity,plot=plot)
+                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                                                             n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
         else:
-            L1,K1,L2,K2,dldz,modb,theta, Lref,Bref = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
-                                                         n_turns=n_turns,helicity=helicity,plot=plot)
+            L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                                                         n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
         
         if mod_norm=='fl-ave':
             print('using fl-ave normalization')
@@ -1017,6 +1023,7 @@ class AE_vmec:
         if mod_norm=='T':
             print('using [T] normalization')
             modb=modb*Bref
+
 
         # get drifts
         roots_list,wpsi_list,walpha_list,tau_b_list,lam_list,k2 = drift_from_vmec(theta,modb,dldz,L1,L2,K1,K2,lam_res)
@@ -1043,6 +1050,12 @@ class AE_vmec:
         self.L2 = L2
         self.K1 = K1
         self.K2 = K2
+        self.iota = iota
+        self.iotaN = iotaN
+
+        # set other scalars
+        self.psi_edge_over_two_pi = np.abs(vmec.wout.phi[-1]/(2*np.pi))
+        self.Bref = Bref
 
         
         # set ft_vol
@@ -1069,7 +1082,7 @@ class AE_vmec:
                     ae_at_lam, _    = quad_vec(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=10000)
                 if fast==True:
                     integrand       = lambda x: np.sum(AE_per_lam_per_z(walpha_at_lam,wpsi_at_lam,Delta_r*w_diamag(-omn,-omt,x),taub_at_lam,x))
-                    ae_at_lam, _    = quad(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=10000)
+                    ae_at_lam, _    = quad(integrand,0.0,np.inf, epsrel=self.epsrel,epsabs=1e-20, limit=50)
                 ae_at_lam_list.append(ae_at_lam/L_tot)
         if omnigenous==True:
             for lam_idx, lam_val in enumerate(self.lam):

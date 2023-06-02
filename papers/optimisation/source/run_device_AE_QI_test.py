@@ -1,0 +1,39 @@
+from    device_AE_for_optimisation import *
+import  numpy as np
+import  sympy as sp
+from    simsopt.mhd.vmec import Vmec
+import time
+
+
+
+# construct input parameters
+omnigenous = False
+eta = 0.0
+
+# construct density and temperature profiles
+s_sym = sp.Symbol('s_sym')
+dsdrho = 2 * s_sym**(1/2)
+n_sym = (1 - s_sym)
+T_sym = (1 - s_sym)**eta
+dnds = n_sym.diff(s_sym)
+dTds = T_sym.diff(s_sym)
+omn_sym = dnds/n_sym * dsdrho
+omt_sym = dTds/T_sym * dsdrho
+# lambdify
+n_f = sp.lambdify(s_sym,n_sym)
+T_f = sp.lambdify(s_sym,T_sym)
+omn_f = sp.lambdify(s_sym,omn_sym)
+omt_f = sp.lambdify(s_sym,omt_sym)
+
+# read in vmec file
+vmec = Vmec('./configs/wout_nfp3_beta_0.00.nc',verbose=True)
+
+
+start_time = time.time()
+
+n_turns = 60
+
+ans = AE_per_surface(vmec,eta=0.0,s=0.5,omnigenous=False, plot=False,gridpoints=n_turns*1000+1,n_turns=n_turns,symmetry='QI')
+print("data generated in       --- %s seconds ---" % (time.time() - start_time))
+
+print(ans)

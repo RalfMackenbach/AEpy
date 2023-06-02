@@ -18,14 +18,16 @@ rc('text', usetex=True)
 
 
 
-def drift_asymptotic(stel,a_minor,k2):
+def drift_asymptotic(stel,AE_obj):
     from scipy import  special
     # NAE drifts, leading order and first order correction
     # normalized as true drift * q * a * B0 * r / H
     # 1/B0 dependence due to choice of Bref
+    k2 = AE_obj.k2
+    scale = AE_obj.Bref * AE_obj.Lref**2 * np.sqrt( stel.B0 / ( 2 * AE_obj.psi_edge_over_two_pi ))
     E_k_K_k =  special.ellipe(k2)/special.ellipk(k2)
-    wa0 = a_minor * -stel.etabar / stel.B0 *(2*E_k_K_k-1)
-    wa1 = a_minor * -stel.r*stel.etabar / stel.B0 *(2/stel.etabar*stel.B20_mean+stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*k2)*E_k_K_k + (1-2*k2)) +\
+    wa0 = scale * -stel.etabar / stel.B0 *(2*E_k_K_k-1)
+    wa1 = scale * -stel.r*stel.etabar / stel.B0 *(2/stel.etabar*stel.B20_mean+stel.etabar*(4*E_k_K_k*E_k_K_k - 2*(3-2*k2)*E_k_K_k + (1-2*k2)) +\
                                                                2/stel.etabar*stel.B2c*(2*E_k_K_k*E_k_K_k - 4*k2*E_k_K_k + (2*k2-1)))
     return wa0, wa1
 
@@ -33,7 +35,7 @@ def drift_asymptotic(stel,a_minor,k2):
 
 
 
-def plot_precession_func(ax,AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0,iota=1.0,color='blue',flip_sign=True):
+def plot_precession_func(ax,AE_obj,save=False,filename='AE_precession.eps',nae=False,stel=None,alpha=0.0,fac=1.0,color='blue',flip_sign=True):
     r"""
     Plots the precession as a function of the bounce-points and k2.
     """
@@ -60,15 +62,16 @@ def plot_precession_func(ax,AE_obj,save=False,filename='AE_precession.eps',nae=F
 
     roots_ordered, wpsi_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, wpsi_bounceplot))))
     roots_ordered, walpha_bounceplot = (list(t) for t in zip(*sorted(zip(roots_bounceplot, walpha_bounceplot))))
-    wa0, wa1 = drift_asymptotic(stel,AE_obj.a_minor,AE_obj.k2)
-    roots_ordered     = np.asarray(roots_ordered)/iota
-    roots_ordered_chi = stel.iotaN*roots_ordered - alpha
+    wa0, wa1 = drift_asymptotic(stel,AE_obj)
+    roots_ordered     = np.asarray(roots_ordered)/np.abs(AE_obj.iota)/fac
+    roots_ordered_chi = np.abs(AE_obj.iotaN)*roots_ordered - alpha
     khat = np.sin(np.mod(roots_ordered_chi/2.0,2*np.pi))
 
     # plot as function of khat^2
     ax.scatter(khat**2,np.asarray(walpha_bounceplot),s=0.2,marker='.',color=color,facecolors=color)
     ax.plot(AE_obj.k2, wa0, color = 'red',     linestyle='dotted')
     ax.plot(AE_obj.k2, wa0+wa1, color = 'green', linestyle='dashed')
+
 
 
 
@@ -110,7 +113,7 @@ vmec_QH.run()
 wout_HSX = vmec_HSX.wout
 wout_QA = vmec_QA.wout
 wout_QH = vmec_QH.wout
-a_minor_HSX = wout_HSX.Aminor_p
+a_minor_HSX = wout_HSX.Aminor_p 
 a_minor_QA = wout_QA.Aminor_p
 a_minor_QH = wout_QH.Aminor_p
 
@@ -126,16 +129,40 @@ color = 'black'
 fig, ax = plt.subplots(2,3,figsize=(6,4),sharex=True,sharey=True,tight_layout=True)
 
 
+booz_bool = False
+n_chi_turns = 1.0
+
+
+# now, HSX
+for idx, rho in enumerate(rho_arr):
+    # find r
+    print(rho)
+    edge_toroidal_flux_over_2pi = np.abs(vmec_HSX.wout.phi[-1] / (2 * np.pi))
+    stel_HSX.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_HSX.B0) 
+    # omn and omt not needed, but let's set anyhow
+    stel_HSX.calculate()
+    helicity_HSX = +4
+    fl =vmec_fieldlines(vmec_HSX,rho**2,0.0,theta1d=np.linspace(-1,1,3))
+    VMEC_AE_HSX = ae.AE_vmec(vmec_HSX,rho**2,n_turns=n_chi_turns,
+                        booz=booz_bool,lam_res=lam_res,gridpoints=10001,plot=False,
+                        mod_norm=None,helicity=helicity_HSX,QS_mapping=True)
+    conv_fac = VMEC_AE_HSX.z[0]/VMEC_AE_HSX.z[np.argmax(VMEC_AE_HSX.modb)] # tweaked to have exactly one well. needed likely due to poor QS of HSX
+    VMEC_AE_HSX = ae.AE_vmec(vmec_HSX,rho**2,n_turns=n_chi_turns/conv_fac,
+                        booz=booz_bool,lam_res=lam_res,gridpoints=10001,plot=False,
+                        mod_norm=None,helicity=helicity_HSX,QS_mapping=True)
+    plot_precession_func(ax[idx,2],VMEC_AE_HSX,stel=stel_HSX,alpha=0.0,fac=1/conv_fac,color=color)
+
+
 # do precise QA first
 for idx, rho in enumerate(rho_arr):
     # find r
     edge_toroidal_flux_over_2pi = np.abs(vmec_QA.wout.phi[-1] / (2 * np.pi))
     stel_QA.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_QA.B0) 
     stel_QA.calculate()
-    VMEC_AE_QA = ae.AE_vmec(vmec_QA,rho**2,n_turns=1.0*np.abs(stel_QA.iota/stel_QA.iotaN),
-                        booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
-                        mod_norm='T')
-    plot_precession_func(ax[idx,0],VMEC_AE_QA,stel=stel_QA,alpha=0.0,iota=stel_QA.iota,color=color,flip_sign=False)
+    VMEC_AE_QA = ae.AE_vmec(vmec_QA,rho**2,n_turns=n_chi_turns,
+                        booz=booz_bool,lam_res=lam_res,gridpoints=10001,plot=False,
+                        mod_norm=None,helicity=0,QS_mapping=True)
+    plot_precession_func(ax[idx,0],VMEC_AE_QA,stel=stel_QA,alpha=0.0,color=color,flip_sign=False)
 
 # now, precise QH
 for idx, rho in enumerate(rho_arr):
@@ -144,29 +171,16 @@ for idx, rho in enumerate(rho_arr):
     stel_QH.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_QH.B0) #a_minor_QH*rho
     # omn and omt not needed, but let's set anyhow
     stel_QH.calculate()
-    VMEC_AE_QH = ae.AE_vmec(vmec_QH,rho**2,n_turns=1.0*np.abs(stel_QH.iota/stel_QH.iotaN),
-                        booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
-                        mod_norm='T')
-    plot_precession_func(ax[idx,1],VMEC_AE_QH,stel=stel_QH,alpha=0.0,iota=stel_QH.iota,color=color,flip_sign=False)
+    VMEC_AE_QH = ae.AE_vmec(vmec_QH,rho**2,n_turns=n_chi_turns,
+                        booz=booz_bool,lam_res=lam_res,gridpoints=10001,plot=False,
+                        mod_norm=None,helicity=-4,QS_mapping=True)
+    plot_precession_func(ax[idx,1],VMEC_AE_QH,stel=stel_QH,alpha=0.0,color=color,flip_sign=False)
 
-# now, HSX
-for idx, rho in enumerate(rho_arr):
-    # find r
-    edge_toroidal_flux_over_2pi = np.abs(vmec_HSX.wout.phi[-1] / (2 * np.pi))
-    stel_HSX.r = rho * np.sqrt(2 * edge_toroidal_flux_over_2pi/stel_HSX.B0) 
-    # omn and omt not needed, but let's set anyhow
-    stel_HSX.calculate()
-    fl =vmec_fieldlines(vmec_HSX,rho**2,0.0,theta1d=np.linspace(-1,1,3))
-    iota = fl.iota[0]
-    iotaN = iota - 4
-    VMEC_AE_HSX = ae.AE_vmec(vmec_HSX,rho**2,n_turns=1.0*np.abs(iota/iotaN),
-                        booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
-                        mod_norm='T')
-    conv_fac = VMEC_AE_HSX.z[0]/VMEC_AE_HSX.z[np.argmax(VMEC_AE_HSX.modb)] # tweaked to have exactly one well. needed likely due to poor QS of HSX
-    VMEC_AE_HSX = ae.AE_vmec(vmec_HSX,rho**2,n_turns=1.0*np.abs(iota/iotaN)*1/conv_fac,
-                        booz=True,lam_res=lam_res,gridpoints=10001,plot=False,
-                        mod_norm='T')
-    plot_precession_func(ax[idx,2],VMEC_AE_HSX,stel=stel_HSX,alpha=0.0,iota=iota/conv_fac,color=color)
+
+
+
+
+
 
 
 
@@ -188,10 +202,10 @@ ax[1,2].set_xlim([0.0,1.0])
 ax[0,0].set_ylabel(r'$\hat{\omega}_\alpha$')
 ax[1,0].set_ylabel(r'$\hat{\omega}_\alpha$')
 ax[1,0].set_ylabel(r'$\hat{\omega}_\alpha$')
-ax[1,0].set_xlabel(r'$\hat{k}$')
-ax[1,1].set_xlabel(r'$\hat{k}$')
-ax[1,1].set_xlabel(r'$\hat{k}$')
-ax[1,2].set_xlabel(r'$\hat{k}$')
+ax[1,0].set_xlabel(r'$k$')
+ax[1,1].set_xlabel(r'$k$')
+ax[1,1].set_xlabel(r'$k$')
+ax[1,2].set_xlabel(r'$k$')
 
 ax[0,0].grid()
 ax[0,1].grid()
