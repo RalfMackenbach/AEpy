@@ -440,7 +440,9 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
         theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
     if QS_mapping==False:
         theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
-        
+    if theta_arr[-1] < theta_arr[0]:
+        theta_arr = theta_arr[::-1]
+
     fieldline = vmec_fieldlines(vmec_s,s_val,alpha=alpha,theta1d=theta_arr,phi_center=phi_center)
 
     if plot==True:
@@ -525,6 +527,13 @@ def nae_geo(stel, r, alpha,N_turns=1,gridpoints=1001,a_minor=1.0):
     # alpha = 0
     phi_start   = (-N_turns*np.pi - alpha)/stel.iotaN
     phi_end     = (+N_turns*np.pi - alpha)/stel.iotaN
+
+    # Make sure the integration domain is ordered
+    if phi_start > phi_end:
+        temp = phi_start
+        phi_start = phi_end
+        phi_end = temp
+
     phi         = np.linspace(phi_start, phi_end, gridpoints)
     # Extract basic properties from pyQSC
     B0 = stel.B0
@@ -817,7 +826,7 @@ class AE_pyQSC:
         else:
             stel = stel_obj
 
-        self.stel = stel_obj
+        self.stel = stel
 
         self.normalize = normalize
 
