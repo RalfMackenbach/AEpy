@@ -10,11 +10,12 @@ from    AEpy                import  ae_routines     as ae
 from    matplotlib.colors   import  ListedColormap, LinearSegmentedColormap
 plt.close('all')
 
-font = {'family': 'sans-serif',
-        'weight': 'normal',
-        'size': 10}
+from matplotlib import rc
 
-mpl.rc('font', **font)
+# mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica'],'size': 13})
+## for Palatino and other serif fonts use:
+#rc('font',**{'family':'serif','serif':['Palatino']})
+mpl.rc('text', usetex=True)
 
 
 
@@ -36,7 +37,7 @@ def boundary_and_refinement(gist_file,refine=True,refined_grid=10001,boundary='N
 ############## some variables to changes ##############
 lam_res      = 1000
 make_plots   = True
-force_omnigenous = True
+force_omnigenous = False
 normalize   = 'ft-vol'
 ae_length   = 'None'
 

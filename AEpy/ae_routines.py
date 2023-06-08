@@ -1428,7 +1428,7 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
             'size': 10}
 
     mpl.rc('font', **font)
-    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*4.0))
+    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*3.5))
     ax.set_xlim(min(AE_obj.z)/np.pi,max(AE_obj.z)/np.pi)
 
     lam_arr   = np.asarray(AE_obj.lam).flatten()
@@ -1481,11 +1481,11 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
 
     ax.plot(AE_obj.z/np.pi,AE_obj.modb,color='black',linewidth=2)
     ax2 = ax.twinx()
-    ax2.plot(roots_ordered, wpsi_bounceplot, 'cornflowerblue',linestyle='dashdot',label=r'$\omega_\psi$')
-    ax2.plot(roots_ordered, walpha_bounceplot, 'tab:green',linestyle='dashed',label=r'$\omega_\alpha$')
+    ax2.plot(roots_ordered, wpsi_bounceplot, 'cornflowerblue',linestyle='dashdot',label=r'$\hat{\omega}_\psi$')
+    ax2.plot(roots_ordered, walpha_bounceplot, 'tab:green',linestyle='dashed',label=r'$\hat{\omega}_\alpha$')
     ax2.plot(AE_obj.z/np.pi,AE_obj.z*0.0,linestyle='dotted',color='black')
     ax.set_ylabel(r'$B$')
-    ax2.set_ylabel(r'$\omega_\alpha, \quad \omega_\psi$')
+    ax2.set_ylabel(r'$\hat{\omega}_\alpha, \quad \hat{\omega}_\psi$')
     ax2.tick_params(axis='y', colors='black',direction='in')
     ax.set_xlabel(r'$z/\pi$')
     ax.tick_params(axis='both',direction='in')

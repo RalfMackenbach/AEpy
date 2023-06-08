@@ -10,11 +10,12 @@ from    AEpy                import  ae_routines     as ae
 from    matplotlib.colors   import  ListedColormap, LinearSegmentedColormap
 plt.close('all')
 
-font = {'family': 'sans-serif',
-        'weight': 'normal',
-        'size': 10}
+from matplotlib import rc
 
-mpl.rc('font', **font)
+# mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica'],'size': 13})
+## for Palatino and other serif fonts use:
+#rc('font',**{'family':'serif','serif':['Palatino']})
+mpl.rc('text', usetex=True)
 
 
 
