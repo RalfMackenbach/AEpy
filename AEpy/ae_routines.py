@@ -436,9 +436,11 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     iota_s = vmec_s.iota(s_val)
     iotaN_s = iota_s-helicity
 
-    if QS_mapping==True:
-        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
-    if QS_mapping==False:
+    if QS_mapping=="QA" or QS_mapping=="QH" or QS_mapping == "QS" or QS_mapping == True:
+        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi+helicity*alpha/np.abs(iota_s))*np.abs(iota_s/iotaN_s)
+    elif QS_mapping == "QI":
+        theta_arr = np.linspace(0,2*n_turns,gridpoints)*np.pi*np.abs(iota_s)/vmec_s.nfp + alpha    
+    else:
         theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
     if theta_arr[-1] < theta_arr[0]:
         theta_arr = theta_arr[::-1]
@@ -449,6 +451,9 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
         plot_surface_and_fl(vmec,fieldline,s_val,transparant=False,trans_val=0.9,title='')
 
     modB            = (fieldline.modB).flatten()
+    # import matplotlib.pyplot as plt
+    # plt.plot(modB)
+    # plt.show()
     Bref            = (fieldline.B_reference)
     Lref            = (fieldline.L_reference)
     grad_d_psi      = (fieldline.B_cross_grad_B_dot_grad_psi).flatten()
@@ -488,10 +493,18 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     iota_s = bs.iota(s_val)
     iotaN_s = iota_s-helicity
 
-    if QS_mapping==False:
-        theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    if QS_mapping=="QA" or QS_mapping=="QH" or QS_mapping == "QS" or QS_mapping == True:
+        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+    elif QS_mapping == "QI":
+        theta_arr = np.linspace(0,2*n_turns,gridpoints)*np.pi*np.abs(iota_s)/vmec.wout.nfp + alpha    
     else:
-        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
+        theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    if theta_arr[-1] < theta_arr[0]:
+        theta_arr = theta_arr[::-1]
+    # if QS_mapping==False:
+    #     theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    # else:
+    #     theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
     
 
     fieldline = boozxform_fieldlines(vmec,bs,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
@@ -1000,7 +1013,8 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',QS_mapping=False,epsrel=1e-4):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',
+                 QS_mapping=False,epsrel=1e-4, adjust = False):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
         from simsopt.mhd.boozer     import  Boozer
@@ -1009,12 +1023,28 @@ class AE_vmec:
             if isinstance(booz, Boozer):
                 L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
                                                              gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
+                # Adjust the edge
+                if adjust:
+                    pos = int(gridpoints*(1-0.5/n_turns))
+                    conv_fac = theta[-1]/theta[pos+np.argmax(modb[pos:])]
+                    n_turns = n_turns/conv_fac
+                    L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
+                                                             gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
             else:
                 L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                              n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
         else:
             L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                          n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
+            
+            # Adjust the edge
+            if adjust:
+                pos = int(gridpoints*(1-0.5/n_turns))
+                conv_fac = theta[-1]/theta[pos+np.argmax(modb[pos:])]
+                n_turns = n_turns/conv_fac
+                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                                                            n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
+
         
         if mod_norm=='fl-ave':
             print('using fl-ave normalization')
