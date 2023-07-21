@@ -19,8 +19,9 @@ mpl.rc('text', usetex=True)
 
 
 
-def boundary_and_refinement(gist_file,refine=True,refined_grid=10001,boundary='None',plot=False):
-    gist_file.include_endpoint()
+def boundary_and_refinement(gist_file,refine=True,refined_grid=10001,boundary='None',plot=False,include_end=True):
+    if include_end==True:
+        gist_file.include_endpoint()
     if boundary=='truncate':
         gist_file.truncate_domain()
     if boundary=='extend':
@@ -55,8 +56,8 @@ print('calcuting AE for D3D')
 file = 'gist_D3D_vac_05'
 gist_file = path+file
 gist_file = mag_reader.mag_data(gist_file)
-gist_file = boundary_and_refinement(gist_file)
-ae_dat = ae.AE_gist(gist_file,normalize=normalize,AE_lengthscale=ae_length,lam_res=lam_res)
+gist_file = boundary_and_refinement(gist_file,include_end=False)
+ae_dat = ae.AE_gist(gist_file,normalize=normalize,AE_lengthscale=ae_length,lam_res=10*lam_res)
 ae_dat.calc_AE(omn=3.0,omt=0.0,omnigenous=True)
 ae_dat.plot_AE_per_lam(save=True,filename='AE_per_lam_D3D.png')
 
