@@ -10,11 +10,12 @@ from    AEpy                import  ae_routines     as ae
 from    matplotlib.colors   import  ListedColormap, LinearSegmentedColormap
 plt.close('all')
 
-mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica'],'size': 13})
+from matplotlib import rc
+
+# mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica'],'size': 13})
 ## for Palatino and other serif fonts use:
 #rc('font',**{'family':'serif','serif':['Palatino']})
 mpl.rc('text', usetex=True)
-
 
 
 def boundary_and_refinement(gist_file,refine=True,refined_grid=10001,boundary='None',plot=False):
@@ -36,7 +37,7 @@ def boundary_and_refinement(gist_file,refine=True,refined_grid=10001,boundary='N
 lam_res      = 1000
 make_plots   = False
 force_omnigenous = False
-normalize   = 'None' #'ft-vol'
+normalize   = 'ft-vol'
 ae_length   = 'None'
 
 
@@ -193,6 +194,8 @@ for idx, AE_val in enumerate(AE_total):
     else:
         color_plt='lightgrey'
     ax.scatter(AE_val, Q_norm[idx], marker=next(marker), color=color_plt, zorder=100, s=20)
+
+print(AE_total)
 
 norm = mpl.colors.Normalize(vmin=.5,vmax=4.5)
 cbar = fig.colorbar(cm.ScalarMappable(norm=norm,cmap=colormap),ax=ax,ticks=[1, 2, 3, 4],label=r"$L_\mathrm{ref}/L_n$")

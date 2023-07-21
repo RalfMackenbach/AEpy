@@ -1,3 +1,7 @@
+########################################################
+# Plot in Figure 5: Contribution to AE of different k  #
+########################################################
+
 import scipy
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +12,8 @@ from   matplotlib        import rc
 rc('font',**{'family':'serif','serif':['Computer Modern Serif'], 'size': 12})
 rc('text', usetex=True)
 
+
+# define the function F(c1)
 def f(c1):
     sqrtc1 = np.sqrt(c1)
     erf = scipy.special.erf(sqrtc1)
@@ -16,7 +22,11 @@ def f(c1):
     ans =  15/4 *exp / (sqrtc1 * c1) + exp/sqrtc1 - erf * 15 * sqrtpi / (8 * c1**2) + 3 * sqrtpi * erf / (4 * c1)
     return ans
 
+# scaling factor for the plot
 c = 0.6
+
+
+# make plot
 fig, ax = plt.subplots(1,1,figsize=(c*6,c*4),tight_layout=True)
 
 c1 = np.logspace(-2,3,100)

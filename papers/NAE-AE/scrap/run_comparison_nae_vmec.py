@@ -24,7 +24,7 @@ omnigenous = True
 lam_res = 2
 
 # set rho res
-rho_res = 40
+rho_res = 10
 
 
 
@@ -58,11 +58,11 @@ B_ref = 2 * np.abs(wout.phi[-1] / (2 * np.pi)) / (wout.Aminor_p)**2
 # print(B_ref,R_major,a_minor,a_minor/R_major)
 
 # make Booz
-bs = Boozer(vmec)
-bs.verbose = False
-bs.bx.verbose = False
-bs.register(vmec.s_full_grid)
-bs.run()
+# bs = Boozer(vmec)
+# bs.verbose = False
+# bs.bx.verbose = False
+# bs.register(vmec.s_full_grid)
+# bs.run()
 
 # construct break point
 # set rho break point (< break: pyQSC, > break: VMEC)
@@ -104,12 +104,12 @@ for idx, rho in enumerate(rho_arr):
         if plot:
             VMEC_AE.plot_AE_per_lam()
             VMEC_AE.plot_precession(nae=True,stel=stel,iota=iota_s)
-        BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res,mod_norm='T')
-        BOOZ_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
-        ae_num_booz[idx] = BOOZ_AE.ae_tot
-        if plot:
-            BOOZ_AE.plot_AE_per_lam()
-            BOOZ_AE.plot_precession(nae=True,stel=stel,iota=iota_s)
+        # BOOZ_AE = ae.AE_vmec(vmec,rho**2,booz=bs,n_turns=1,lam_res=lam_res,mod_norm='T')
+        # BOOZ_AE.calc_AE_quad(omn=-omn_input,omt=-omt_input,omnigenous=omnigenous)
+        # ae_num_booz[idx] = BOOZ_AE.ae_tot
+        # if plot:
+        #     BOOZ_AE.plot_AE_per_lam()
+        #     BOOZ_AE.plot_precession(nae=True,stel=stel,iota=iota_s)
 
     # Asymptotic AE
     asym_ae_weak[idx] = NAE_AE.nae_ae_asymp_weak(omn_input,a_minor)
@@ -135,7 +135,8 @@ ax.loglog(rho_arr,asym_ae_weak,label=r'$\widehat{A}_\mathrm{asymp,weak}$',color=
 ax.loglog(rho_arr,asym_ae_strong,label=r'$\widehat{A}_\mathrm{asymp,strong}$',color='red',linestyle='--')
 ax.scatter(rho_arr,ae_num_qsc,label=r'$\widehat{A}_\mathrm{qsc}$',color='black',marker='x')
 ax.scatter(rho_arr,ae_num_vmec,label=r'$\widehat{A}_\mathrm{vmec}$',color='black',marker='o')
-ax.scatter(rho_arr,ae_num_booz,label=r'$\widehat{A}_\mathrm{booz}$',color='blue',marker='o')
+# ax.scatter(rho_arr,ae_num_booz,label=r'$\widehat{A}_\mathrm{booz}$',color='blue',marker='o')
+ax.axvline(np.abs(stel.etabar)/omn)
 ax.set_ylabel(r'$\widehat{A}$')
 ax.set_xlabel(r'$\varrho$')
 ax.grid()

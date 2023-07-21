@@ -18,21 +18,24 @@ rc('text', usetex=True)
 nphi = 1001
 
 
-
+# define names for the comparison
 name_array = ["precise QA", "precise QH", "precise QA+well", "precise QH+well", "2022 QA", "2022 QH nfp2", \
        "2022 QH nfp3 vacuum", "2022 QH nfp3 beta", "2022 QH nfp4 long axis", "2022 QH nfp4 well", "2022 QH nfp4 Mercier", \
        "2022 QH nfp7"]
 
 
-
+# set plotting parameters
 cmap = 'coolwarm'
+# set gradient
 wstar = 1.0
-N_r = 10
+# set r array
+N_r = 6
 r_array = np.logspace(-3,-1,N_r)
 ae_array = np.zeros(N_r)
 ae_nae = np.zeros(N_r)
 
-fig, ax = plt.subplots(1,1,figsize=(6,4),tight_layout=True)
+# set up figure
+fig, ax = plt.subplots(1,1,figsize=(0.5*6,0.5*4),constrained_layout=True)
 
 for ind_name, name in enumerate(name_array):
     print(name)
@@ -47,18 +50,20 @@ for ind_name, name in enumerate(name_array):
         ae_array[ind] = NAE_AE.ae_tot
         ae_nae[ind] = NAE_AE.nae_ae_asymp_weak(stel.r*wstar,1.0)
     print('\n')
-    ax.scatter(ae_nae, ae_array, s=30, label = name, alpha = 0.5, c=r_array, norm=matplotlib.colors.LogNorm(),cmap=cmap)
+    ax.scatter(ae_nae, ae_array, s=15, label = name, alpha = 0.5, c=r_array, norm=matplotlib.colors.LogNorm(),cmap=cmap)
 
 xlim = ax.get_xlim()
 ax.plot([xlim[0],xlim[1]], [xlim[0],xlim[1]],'k', linestyle = 'dashed',zorder=-10)
 ax.set_xscale('log')
 ax.set_yscale('log')
-ax.set_xlabel(r'$\widehat{A}_\mathrm{NAE}$')
+ax.set_xlabel(r'$\widehat{A}_\mathrm{w}$')
 ax.set_ylabel(r'$\widehat{A}_\mathrm{numerical}$')
-fig.colorbar(cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=r_array.min(),vmax=r_array.max()), cmap=cmap), ax=ax,label=r'$\varrho$')
+ax.set_xticks([1e-12,1e-8,1e-4])
+ax.set_yticks([1e-12,1e-8,1e-4])
 ax.grid()
+cbar = fig.colorbar(cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=r_array.min(),vmax=r_array.max()), cmap=cmap), ax=ax,ticks=[1e-3,1e-2,1e-1],label=r'$\varrho$')
 # save the figure
-fig.savefig('./figures/NAE-AE_comparison.png', dpi=1000)
+fig.savefig('NAE-AE_comparison.png', dpi=1000)
 
 
 plt.show()

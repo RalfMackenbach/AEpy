@@ -129,7 +129,7 @@ color = 'black'
 fig, ax = plt.subplots(2,3,figsize=(6,4),sharex=True,sharey=True,tight_layout=True)
 
 
-booz_bool = False
+booz_bool = True
 n_chi_turns = 1.0
 
 

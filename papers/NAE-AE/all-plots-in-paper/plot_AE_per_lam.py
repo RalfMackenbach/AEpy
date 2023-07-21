@@ -1,3 +1,7 @@
+##########################################
+# Plot AE per lambda for Figures 6 and 7 #
+##########################################
+
 import scipy
 import numpy as np
 from    qsc     import  Qsc
@@ -82,7 +86,6 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     def find_nearest(array, value):
         array = np.asarray(array)
         idx = (np.abs(array - value)).argmin()
-        print(idx,array[idx])
         return idx
 
 

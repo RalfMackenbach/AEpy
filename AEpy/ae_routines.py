@@ -436,17 +436,24 @@ def vmec_geo(vmec,s_val,alpha=0.0,phi_center=0.0,gridpoints=1001,n_turns=1,helic
     iota_s = vmec_s.iota(s_val)
     iotaN_s = iota_s-helicity
 
-    if QS_mapping==True:
-        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
-    if QS_mapping==False:
+    if QS_mapping=="QA" or QS_mapping=="QH" or QS_mapping == "QS" or QS_mapping == True:
+        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi+helicity*alpha/np.abs(iota_s))*np.abs(iota_s/iotaN_s)
+    elif QS_mapping == "QI":
+        theta_arr = np.linspace(0,2*n_turns,gridpoints)*np.pi*np.abs(iota_s)/vmec_s.nfp + alpha    
+    else:
         theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
-        
+    if theta_arr[-1] < theta_arr[0]:
+        theta_arr = theta_arr[::-1]
+
     fieldline = vmec_fieldlines(vmec_s,s_val,alpha=alpha,theta1d=theta_arr,phi_center=phi_center)
 
     if plot==True:
         plot_surface_and_fl(vmec,fieldline,s_val,transparant=False,trans_val=0.9,title='')
 
     modB            = (fieldline.modB).flatten()
+    # import matplotlib.pyplot as plt
+    # plt.plot(modB)
+    # plt.show()
     Bref            = (fieldline.B_reference)
     Lref            = (fieldline.L_reference)
     grad_d_psi      = (fieldline.B_cross_grad_B_dot_grad_psi).flatten()
@@ -486,10 +493,18 @@ def booz_geo(vmec,s_val,bs = [], alpha=0.0,phi_center=0.0,gridpoints=1001,n_turn
     iota_s = bs.iota(s_val)
     iotaN_s = iota_s-helicity
 
-    if QS_mapping==False:
-        theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    if QS_mapping=="QA" or QS_mapping=="QH" or QS_mapping == "QS" or QS_mapping == True:
+        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*iota_s/iotaN_s
+    elif QS_mapping == "QI":
+        theta_arr = np.linspace(0,2*n_turns,gridpoints)*np.pi*np.abs(iota_s)/vmec.wout.nfp + alpha    
     else:
-        theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
+        theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    if theta_arr[-1] < theta_arr[0]:
+        theta_arr = theta_arr[::-1]
+    # if QS_mapping==False:
+    #     theta_arr = np.linspace(-n_turns,n_turns,gridpoints)*np.pi
+    # else:
+    #     theta_arr = (np.linspace(-n_turns,n_turns,gridpoints)*np.pi-helicity*alpha/iota_s)*np.abs(iota_s/iotaN_s)
     
 
     fieldline = boozxform_fieldlines(vmec,bs,s_val,alpha,theta1d=theta_arr,phi_center=phi_center)
@@ -525,6 +540,13 @@ def nae_geo(stel, r, alpha,N_turns=1,gridpoints=1001,a_minor=1.0):
     # alpha = 0
     phi_start   = (-N_turns*np.pi - alpha)/stel.iotaN
     phi_end     = (+N_turns*np.pi - alpha)/stel.iotaN
+
+    # Make sure the integration domain is ordered
+    if phi_start > phi_end:
+        temp = phi_start
+        phi_start = phi_end
+        phi_end = temp
+
     phi         = np.linspace(phi_start, phi_end, gridpoints)
     # Extract basic properties from pyQSC
     B0 = stel.B0
@@ -817,7 +839,7 @@ class AE_pyQSC:
         else:
             stel = stel_obj
 
-        self.stel = stel_obj
+        self.stel = stel
 
         self.normalize = normalize
 
@@ -991,7 +1013,8 @@ class AE_pyQSC:
 
 
 class AE_vmec:
-    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',QS_mapping=False,epsrel=1e-4):
+    def __init__(self, vmec,s_val,booz = False, alpha=0.0,phi_center=0.0,gridpoints=1001,lam_res=1001,n_turns=3, helicity=0,plot=False,mod_norm='None',
+                 QS_mapping=False,epsrel=1e-4, adjust = False):
         import matplotlib.pyplot    as      plt
         from simsopt.mhd.vmec       import  Vmec
         from simsopt.mhd.boozer     import  Boozer
@@ -1000,12 +1023,28 @@ class AE_vmec:
             if isinstance(booz, Boozer):
                 L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
                                                              gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
+                # Adjust the edge
+                if adjust:
+                    pos = int(gridpoints*(1-0.5/n_turns))
+                    conv_fac = theta[-1]/theta[pos+np.argmax(modb[pos:])]
+                    n_turns = n_turns/conv_fac
+                    L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val,bs = booz, alpha=alpha,phi_center=phi_center,
+                                                             gridpoints=gridpoints,n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
             else:
                 L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = booz_geo(vmec,s_val, alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                              n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
         else:
             L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
                                                          n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
+            
+            # Adjust the edge
+            if adjust:
+                pos = int(gridpoints*(1-0.5/n_turns))
+                conv_fac = theta[-1]/theta[pos+np.argmax(modb[pos:])]
+                n_turns = n_turns/conv_fac
+                L1,K1,L2,K2,dldz,modb,theta, Lref,Bref, iota, iotaN = vmec_geo(vmec,s_val,alpha=alpha,phi_center=phi_center,gridpoints=gridpoints,
+                                                            n_turns=n_turns,helicity=helicity,plot=plot,QS_mapping=QS_mapping)
+
         
         if mod_norm=='fl-ave':
             print('using fl-ave normalization')
@@ -1428,7 +1467,7 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
             'size': 10}
 
     mpl.rc('font', **font)
-    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*4.0))
+    fig ,ax = plt.subplots(1, 1, figsize=(scale*6, scale*3.5))
     ax.set_xlim(min(AE_obj.z)/np.pi,max(AE_obj.z)/np.pi)
 
     lam_arr   = np.asarray(AE_obj.lam).flatten()
@@ -1481,11 +1520,11 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
 
     ax.plot(AE_obj.z/np.pi,AE_obj.modb,color='black',linewidth=2)
     ax2 = ax.twinx()
-    ax2.plot(roots_ordered, wpsi_bounceplot, 'cornflowerblue',linestyle='dashdot',label=r'$\omega_\psi$')
-    ax2.plot(roots_ordered, walpha_bounceplot, 'tab:green',linestyle='dashed',label=r'$\omega_\alpha$')
+    ax2.plot(roots_ordered, wpsi_bounceplot, 'cornflowerblue',linestyle='dashdot',label=r'$\hat{\omega}_\psi$')
+    ax2.plot(roots_ordered, walpha_bounceplot, 'tab:green',linestyle='dashed',label=r'$\hat{\omega}_\alpha$')
     ax2.plot(AE_obj.z/np.pi,AE_obj.z*0.0,linestyle='dotted',color='black')
     ax.set_ylabel(r'$B$')
-    ax2.set_ylabel(r'$\omega_\alpha, \quad \omega_\psi$')
+    ax2.set_ylabel(r'$\hat{\omega}_\alpha, \quad \hat{\omega}_\psi$')
     ax2.tick_params(axis='y', colors='black',direction='in')
     ax.set_xlabel(r'$z/\pi$')
     ax.tick_params(axis='both',direction='in')
@@ -1517,6 +1556,10 @@ def plot_geom_nae(AE_obj):
     ax[1,0].set_ylabel(r'$\frac{B \times \nabla B}{B^2}\cdot \nabla \alpha$')
     ax[1,1].set_ylabel(r'$\frac{ B \times \nabla B }{B^2}\cdot \nabla \psi$')
     plt.show()
+
+
+
+
 
 
 

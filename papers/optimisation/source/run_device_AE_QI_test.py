@@ -26,13 +26,14 @@ omn_f = sp.lambdify(s_sym,omn_sym)
 omt_f = sp.lambdify(s_sym,omt_sym)
 
 # read in vmec file
-vmec = Vmec('./configs/wout_nfp2_beta_0.00.nc',verbose=True)
+vmec = Vmec('./configs/wout_nfp3_beta_0.00.nc',verbose=True)
 
 
 start_time = time.time()
-ans = device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=10,omnigenous=False,plot=False,symmetry='QI')
-print("data generated in       --- %s seconds ---" % (time.time() - start_time))
 
-_ = device_AE(vmec,n_f,T_f,omn_f,omt_f,s_res=1,omnigenous=False,plot=True,symmetry='QI')
+n_turns = 60
+
+ans = AE_per_surface(vmec,eta=0.0,s=0.5,omnigenous=False, plot=False,gridpoints=n_turns*1000+1,n_turns=n_turns,symmetry='QI')
+print("data generated in       --- %s seconds ---" % (time.time() - start_time))
 
 print(ans)
