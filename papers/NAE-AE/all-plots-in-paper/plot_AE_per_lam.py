@@ -11,8 +11,6 @@ from scipy.interpolate import interp1d
 from   matplotlib        import rc
 
 
-
-
 def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     r"""
     Plots AE per bouncewell
@@ -117,9 +115,6 @@ def plot_AE_per_lam_func(AE_obj,save=False,filename='AE_per_lam.eps',scale=1.0):
     plt.show()
 
 
-
-
-
 rc('font',**{'family':'serif','serif':['Computer Modern Serif'], 'size': 12})
 rc('text', usetex=True)
 
@@ -131,6 +126,9 @@ omt     = 0.0
 r       = 1e-3
 omnigenous = True
 
+# save figure?
+save_fig = True
+
 
 nphi = int(1e3+1)
 stel = Qsc.from_paper(filename, nphi = nphi)
@@ -141,8 +139,8 @@ stel.zs = -stel.zs
 NAE_AE = ae.AE_pyQSC(stel_obj = stel, r=stel.r, alpha=0.0, N_turns=1, nphi=nphi,
             lam_res=10001,get_drifts=True,normalize='ft-vol',AE_lengthscale='None')
 NAE_AE.calc_AE(omn=omn_weak,omt=omt,omnigenous=omnigenous)
-plot_AE_per_lam_func(NAE_AE,scale=0.5,save=True,filename='AE_per_lam.png')
+plot_AE_per_lam_func(NAE_AE,scale=0.5,save=save_fig,filename='AE_per_lam.png')
 
 
 NAE_AE.calc_AE(omn=omn_strong,omt=omt,omnigenous=omnigenous)
-plot_AE_per_lam_func(NAE_AE,scale=0.5,save=True,filename='AE_per_lam_strongly_driven.png')
+plot_AE_per_lam_func(NAE_AE,scale=0.5,save=save_fig,filename='AE_per_lam_strongly_driven.png')

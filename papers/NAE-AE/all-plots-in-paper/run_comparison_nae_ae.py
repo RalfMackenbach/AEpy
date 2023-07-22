@@ -1,3 +1,7 @@
+#############################################
+# Figure 8a: weak and strong regimes in nae
+#############################################
+
 import  numpy   as      np
 from    qsc     import  Qsc
 from    AEpy    import  ae_routines as      ae
@@ -16,6 +20,9 @@ rc('text', usetex=True)
 
 # do we plot during iteration?
 plot = False
+
+# save figure?
+save_fig = False
 
 # force omnigenous
 omnigenous = True
@@ -68,12 +75,6 @@ for idx, rho in enumerate(rho_arr):
     # Strongly driven AE
     asym_ae_strong[idx] = NAE_AE.nae_ae_asymp_strong(omn_input)
 
-    
-
-
-
-
-
 
 # plot
 
@@ -94,5 +95,6 @@ ax.tick_params(direction='in')
 ax.set_xlim([rho_arr[0],rho_arr[-1]])
 ax.set_ylim([np.nanmin(ae_num_qsc)/2,np.nanmax(ae_num_qsc)*2])
 # ax.legend()
-plt.savefig('comparison_nae_AE.png',dpi=1000)
+if save_fig:
+    plt.savefig('comparison_nae_AE.png',dpi=1000)
 plt.show()

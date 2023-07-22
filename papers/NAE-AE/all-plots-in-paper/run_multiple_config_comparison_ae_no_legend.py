@@ -1,3 +1,7 @@
+##############################################################
+# Figure 8b: comparison weak AE between analytics and numeric
+##############################################################
+
 from scipy.special import erf
 from scipy.integrate import quad, quad_vec
 from scipy.interpolate import interp1d
@@ -16,7 +20,7 @@ rc('font',**{'family':'serif','serif':['Computer Modern Serif'], 'size': 12})
 rc('text', usetex=True)
 
 nphi = 1001
-
+save_fig = False
 
 # define names for the comparison
 name_array = ["precise QA", "precise QH", "precise QA+well", "precise QH+well", "2022 QA", "2022 QH nfp2", \
@@ -62,8 +66,10 @@ ax.set_xticks([1e-12,1e-8,1e-4])
 ax.set_yticks([1e-12,1e-8,1e-4])
 ax.grid()
 cbar = fig.colorbar(cm.ScalarMappable(norm=matplotlib.colors.LogNorm(vmin=r_array.min(),vmax=r_array.max()), cmap=cmap), ax=ax,ticks=[1e-3,1e-2,1e-1],label=r'$\varrho$')
+
 # save the figure
-fig.savefig('NAE-AE_comparison.png', dpi=1000)
+if save_fig:
+    fig.savefig('NAE-AE_comparison.png', dpi=1000)
 
 
 plt.show()
