@@ -25,7 +25,7 @@ def AE_per_lam_per_z(walpha,wpsi,wdia,tau_b,z):
     envelope = np.exp(-z) * np.power(z,5/2)
     jacobian = tau_b
     val      = geometry * envelope * jacobian
-    return val/(4*np.sqrt(np.pi))
+    return val/(6*np.sqrt(np.pi))
 
 # Integrand of AE with z-dependence integrated out 
 # only possible for omnigenous devices.
@@ -41,7 +41,7 @@ def AE_per_lam(c0,c1,tau_b,walpha):
     ans[condition1]  = (2 * c0[condition1] - 5 * c1[condition1])
     ans[condition2]  = (2 * c0[condition2] - 5 * c1[condition2]) * erf(np.sqrt(c0[condition2]/c1[condition2])) + 2 / (3 *np.sqrt(np.pi)) * ( 4 * c0[condition2] + 15 * c1[condition2] ) * np.sqrt(c0[condition2]/c1[condition2]) * np.exp( - c0[condition2]/c1[condition2] )
     ans[condition3]  = (2 * c0[condition3] - 5 * c1[condition3]) * (1 - erf(np.sqrt(c0[condition3]/c1[condition3]))) - 2 / (3 *np.sqrt(np.pi)) * ( 4 * c0[condition3] + 15 * c1[condition3] ) * np.sqrt(c0[condition3]/c1[condition3]) * np.exp( - c0[condition3]/c1[condition3] )
-    return 3/16*ans*tau_b*walpha**2
+    return 1/8*ans*tau_b*walpha**2
 
 
 ######################################################
@@ -714,7 +714,7 @@ class AE_gist:
         self.normalize = normalize
 
         self.Delta_x = 1.0
-        self.Delta_y = 1.0/np.sqrt(self.s0)
+        self.Delta_y = 1.0
         if AE_lengthscale=='q':
             self.Delta_x = self.q0 * self.Delta_x
             self.Delta_y = self.q0 * self.Delta_y
